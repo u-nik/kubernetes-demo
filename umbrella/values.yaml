@@ -1,0 +1,46 @@
+global:
+  namespaces:
+    grafana: grafana
+    influxdb: influxdb
+    postgresql: postgresql
+
+  influxdb:
+    url: http://influxdb.influxdb.svc.cluster.local:8181
+    database: grafana
+
+  postgresql:
+    host: postgresql.postgresql.svc.cluster.local
+    database: grafana
+    user: grafana
+    password: grafana-secret
+
+# Subchart values can be set here and will override their defaults.
+grafana:
+  namespaceOverride: grafana
+  createNamespace: true
+
+  datasources:
+    url: http://influxdb.influxdb.svc.cluster.local:8181
+    database: grafana
+
+  database:
+    host: postgresql.postgresql.svc.cluster.local
+    name: grafana
+    user: grafana
+    password: grafana-secret
+
+influxdb:
+  namespaceOverride: influxdb
+  createNamespace: true
+
+  database:
+    create: true
+    name: grafana
+
+postgresql:
+  namespaceOverride: postgresql
+  createNamespace: true
+  auth:
+    database: grafana
+    username: grafana
+    password: grafana-secret

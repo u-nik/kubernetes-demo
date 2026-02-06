@@ -1,0 +1,12 @@
+dependencies:
+- name: grafana
+  repository: file://../grafana
+  version: 0.1.0
+- name: influxdb
+  repository: file://../influxdb
+  version: 0.1.0
+- name: postgresql
+  repository: file://../postgresql
+  version: 0.1.0
+digest: sha256:76bee50e6fca8cb7652c63c2f235553ccf038414aa11130e36b2e6ecaa23f123
+generated: "2026-02-05T18:30:10.112975815+01:00"

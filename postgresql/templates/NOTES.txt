@@ -1,0 +1,12 @@
+PostgreSQL has been deployed!
+
+Database: {{ .Values.auth.database }}
+Username: {{ .Values.auth.username }}
+Namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}
+
+To connect from within the cluster:
+  Host: {{ include "postgresql.fullname" . }}.{{ .Values.namespaceOverride | default .Release.Namespace }}.svc.cluster.local
+  Port: {{ .Values.service.port }}
+
+Connection string for Grafana:
+  postgres://{{ .Values.auth.username }}:{{ .Values.auth.password }}@{{ include "postgresql.fullname" . }}.{{ .Values.namespaceOverride | default .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/{{ .Values.auth.database }}?sslmode=disable

@@ -1,0 +1,12 @@
+{{- if .Values.createNamespace -}}
+{{- $ns := coalesce .Values.namespaceOverride (dig "namespaces" "influxdb" "" .Values.global) .Release.Namespace -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $ns }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name | quote }}
+    meta.helm.sh/release-namespace: {{ $ns | quote }}
+  labels:
+{{ include "influxdb3.labels" . | indent 4 }}
+{{- end -}}

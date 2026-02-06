@@ -1,0 +1,65 @@
+namespaceOverride: grafana
+createNamespace: true
+
+replicaCount: 10
+
+image:
+  repository: grafana/grafana
+  tag: "12.3"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: "grafana-sa"
+
+admin:
+  existingSecret: ""
+  user: admin
+  password: test123
+
+datasources:
+  enabled: true
+  name: InfluxDB3
+  type: influxdb
+  url: http://influxdb.influxdb.svc.cluster.local:8181
+  access: proxy
+  isDefault: false
+  database: "storelogix"
+  version: 3
+  deleteDatasources: []
+  jsonData: {}
+  secureJsonData: {}
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: grafana.local
+      paths:
+        - /
+  tls: []
+
+persistence:
+  enabled: false
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  storageClassName: ""
+
+# PostgreSQL database for Grafana settings persistence
+database:
+  enabled: true
+  type: postgres
+  host: postgresql.postgresql.svc.cluster.local
+  port: 5432
+  name: grafana
+  user: grafana
+  password: grafana-secret
+  sslMode: disable
+
+resources: {}

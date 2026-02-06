@@ -1,0 +1,12 @@
+{{- if .Values.createNamespace -}}
+{{- $ns := coalesce .Values.namespaceOverride (dig "namespaces" "postgresql" "" .Values.global) .Release.Namespace -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $ns }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name | quote }}
+    meta.helm.sh/release-namespace: {{ $ns | quote }}
+  labels:
+{{ include "postgresql.labels" . | indent 4 }}
+{{- end -}}

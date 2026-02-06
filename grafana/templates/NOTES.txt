@@ -1,0 +1,9 @@
+1. Get the application URL by running these commands:
+
+  export POD_NAME=$(kubectl get pods -l app.kubernetes.io/name={{ include "grafana.name" . }},app.kubernetes.io/instance={{ .Release.Name }} -o jsonpath="{.items[0].metadata.name}")
+  kubectl port-forward $POD_NAME 3000:3000
+
+2. Login with:
+
+  Username: {{ .Values.admin.user }}
+  Password: {{ if .Values.admin.existingSecret }}stored in {{ .Values.admin.existingSecret }}{{ else }}{{ .Values.admin.password }}{{ end }}

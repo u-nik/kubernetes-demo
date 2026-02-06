@@ -1,0 +1,36 @@
+{{- if .Values.datasources.enabled -}}
+{{- $influxUrl := coalesce .Values.datasources.url (dig "influxdb" "url" "" .Values.global) -}}
+{{- $influxDb := coalesce .Values.datasources.database (dig "influxdb" "database" "" .Values.global) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "grafana.fullname" . }}-datasources
+  namespace: {{ include "grafana.namespace" . }}
+  labels:
+{{ include "grafana.labels" . | indent 4 }}
+data:
+  datasources.yaml: |
+    apiVersion: 1
+{{ if .Values.datasources.deleteDatasources }}
+    deleteDatasources:
+{{ toYaml .Values.datasources.deleteDatasources | indent 6 }}
+{{ end }}
+    datasources:
+      - name: {{ .Values.datasources.name | quote }}
+        type: {{ .Values.datasources.type | quote }}
+        access: {{ .Values.datasources.access | quote }}
+        url: {{ $influxUrl | quote }}
+        isDefault: {{ .Values.datasources.isDefault }}
+    {{ if $influxDb }}
+        database: {{ $influxDb | quote }}
+    {{ end }}
+        version: {{ .Values.datasources.version | default 1 }}
+{{ if .Values.datasources.jsonData }}
+        jsonData:
+{{ toYaml .Values.datasources.jsonData | indent 10 }}
+{{ end }}
+{{ if .Values.datasources.secureJsonData }}
+        secureJsonData:
+{{ toYaml .Values.datasources.secureJsonData | indent 10 }}
+{{ end }}
+{{ end }}

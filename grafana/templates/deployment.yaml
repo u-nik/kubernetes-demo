@@ -1,0 +1,87 @@
+{{- $pgHost := coalesce .Values.database.host (dig "postgresql" "host" "" .Values.global) -}}
+{{- $pgName := coalesce .Values.database.name (dig "postgresql" "database" "" .Values.global) -}}
+{{- $pgUser := coalesce .Values.database.user (dig "postgresql" "user" "" .Values.global) -}}
+{{- $pgPassword := coalesce .Values.database.password (dig "postgresql" "password" "" .Values.global) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "grafana.fullname" . }}
+  namespace: {{ include "grafana.namespace" . }}
+  labels:
+{{ include "grafana.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "grafana.selectorLabels" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "grafana.selectorLabels" . | indent 8 }}
+      annotations:
+        checksum/datasources: {{ include (print $.Template.BasePath "/datasources.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "grafana.serviceAccountName" . }}
+      containers:
+        - name: grafana
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.admin.existingSecret | default (printf "%s-admin" (include "grafana.fullname" .)) }}
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.admin.existingSecret | default (printf "%s-admin" (include "grafana.fullname" .)) }}
+                  key: admin-password
+{{ if .Values.database.enabled }}
+            - name: GF_DATABASE_TYPE
+              value: {{ .Values.database.type | quote }}
+            - name: GF_DATABASE_HOST
+              value: "{{ $pgHost }}:{{ .Values.database.port }}"
+            - name: GF_DATABASE_NAME
+              value: {{ $pgName | quote }}
+            - name: GF_DATABASE_USER
+              value: {{ $pgUser | quote }}
+            - name: GF_DATABASE_PASSWORD
+              value: {{ $pgPassword | quote }}
+            - name: GF_DATABASE_SSL_MODE
+              value: {{ .Values.database.sslMode | quote }}
+{{ end }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+          volumeMounts:
+{{ if .Values.datasources.enabled }}
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+{{ end }}
+{{ if .Values.persistence.enabled }}
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+{{ end }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+{{ if .Values.datasources.enabled }}
+        - name: grafana-datasources
+          configMap:
+            name: {{ include "grafana.fullname" . }}-datasources
+{{ end }}
+{{ if .Values.persistence.enabled }}
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: {{ include "grafana.fullname" . }}
+{{ end }}

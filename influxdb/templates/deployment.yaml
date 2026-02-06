@@ -1,0 +1,91 @@
+{{- $influxDbName := coalesce .Values.database.name (dig "influxdb" "database" "" .Values.global) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "influxdb3.fullname" . }}
+  namespace: {{ include "influxdb3.namespace" . }}
+  labels:
+{{ include "influxdb3.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "influxdb3.selectorLabels" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "influxdb3.selectorLabels" . | indent 8 }}
+    spec:
+      serviceAccountName: {{ include "influxdb3.serviceAccountName" . }}
+      containers:
+        - name: influxdb3
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+            - --node-id-from-env
+            - INFLUXDB3_NODE_ID
+          ports:
+            - name: http
+              containerPort: 8181
+              protocol: TCP
+          env:
+            - name: INFLUXDB3_NODE_ID
+              value: {{ .Values.nodeId | quote }}
+            - name: INFLUXDB3_START_WITHOUT_AUTH
+              value: {{ .Values.startWithoutAuth | quote }}
+{{ if .Values.database.create }}
+            - name: INFLUXDB3_HOST_URL
+              value: {{ .Values.database.host | quote }}
+            - name: INFLUXDB3_DATABASE_NAME
+              value: {{ $influxDbName | quote }}
+{{ if .Values.database.authToken }}
+            - name: INFLUXDB3_AUTH_TOKEN
+              value: {{ .Values.database.authToken | quote }}
+{{ end }}
+{{ end }}
+{{ if .Values.extraEnv }}
+{{ toYaml .Values.extraEnv | indent 12 }}
+{{ end }}
+{{ if .Values.database.create }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - >
+                    for i in $(seq 1 30); do
+                      if influxdb3 show databases | awk 'NR>1 {print $1}' | grep -Fx "$INFLUXDB3_DATABASE_NAME" >/dev/null 2>&1; then
+                        echo "InfluxDB database exists: $INFLUXDB3_DATABASE_NAME";
+                        exit 0;
+                      fi;
+                      echo "Creating InfluxDB database: $INFLUXDB3_DATABASE_NAME (attempt $i)";
+                      influxdb3 create database "$INFLUXDB3_DATABASE_NAME"{{- if .Values.database.retentionPeriod }} --retention-period {{ .Values.database.retentionPeriod | quote }}{{- end }} && exit 0;
+                      sleep $((i + 1));
+                    done;
+                    exit 0
+{{ end }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+{{ if .Values.persistence.enabled }}
+            - name: influxdb-data
+              mountPath: /var/lib/influxdb3
+{{ end }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+{{ if .Values.persistence.enabled }}
+        - name: influxdb-data
+          persistentVolumeClaim:
+            claimName: {{ include "influxdb3.fullname" . }}
+{{ end }}

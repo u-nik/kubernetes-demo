@@ -1,0 +1,7 @@
+1. Check the service endpoint:
+
+  kubectl get svc -n {{ .Values.namespaceOverride | default .Release.Namespace }} {{ include "influxdb3.fullname" . }}
+
+2. Port-forward (if not using a LoadBalancer):
+
+  kubectl port-forward -n {{ .Values.namespaceOverride | default .Release.Namespace }} svc/{{ include "influxdb3.fullname" . }} 8086:{{ .Values.service.port }}

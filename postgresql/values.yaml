@@ -1,0 +1,32 @@
+namespaceOverride: postgresql
+createNamespace: true
+
+replicaCount: 1
+
+image:
+  repository: postgres
+  tag: "16-alpine"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: "postgresql-sa"
+
+# PostgreSQL credentials and database
+auth:
+  username: grafana
+  password: grafana-secret
+  database: storelogix
+
+service:
+  type: ClusterIP
+  port: 5432
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  storageClassName: ""
+
+resources: {}

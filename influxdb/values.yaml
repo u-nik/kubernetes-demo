@@ -1,0 +1,40 @@
+namespaceOverride: influxdb
+createNamespace: true
+
+replicaCount: 1
+
+image:
+  repository: influxdb
+  tag: "3-core"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: "influxdb-sa"
+
+service:
+  type: LoadBalancer
+  port: 8181
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+  storageClassName: ""
+
+extraEnv: []
+
+# Required by InfluxDB 3 Core
+nodeId: "influxdb-0"
+startWithoutAuth: "true"
+
+# Optional database creation on startup
+database:
+  create: true
+  name: grafana
+  host: "http://127.0.0.1:8181"
+  retentionPeriod: ""
+  authToken: ""
+
+resources: {}
