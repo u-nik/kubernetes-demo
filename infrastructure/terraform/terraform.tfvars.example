@@ -1,0 +1,10 @@
+# Hetzner Cloud API Token
+# Get your token from: https://console.hetzner.cloud/
+hcloud_token = "your-hetzner-cloud-api-token-here"
+
+# Optional: Change location (default: nbg1)
+# Available locations: nbg1, fsn1, hel1, ash, hil
+# location = "nbg1"
+
+# Optional: Change environment label (default: kubernetes-demo)
+# environment = "kubernetes-demo"
