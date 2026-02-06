@@ -7,10 +7,10 @@ appVersion: "1.0.0"
 dependencies:
   - name: grafana
     version: 0.1.0
-    repository: "file://../grafana"
+    repository: "file://../../apps/grafana"
   - name: influxdb
     version: 0.1.0
-    repository: "file://../influxdb"
+    repository: "file://../../apps/influxdb"
   - name: postgresql
     version: 0.1.0
-    repository: "file://../postgresql"
+    repository: "file://../../apps/postgresql"
