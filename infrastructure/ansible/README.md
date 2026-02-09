@@ -29,6 +29,11 @@ The cluster consists of:
    pip install ansible
    ```
 
+   Then install required Ansible collections:
+   ```bash
+   ansible-galaxy collection install -r requirements.yml
+   ```
+
 3. **SSH Access**: Ensure you can SSH into the nodes as root using the SSH key configured in Terraform
 
 4. **jq**: Required for the inventory generation script
