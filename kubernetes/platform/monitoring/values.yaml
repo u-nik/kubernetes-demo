@@ -14,6 +14,15 @@ grafana:
   fullnameOverride: grafana
   adminUser: admin
   adminPassword: test123
+  initChownData:
+    enabled: false
+  sidecar:
+    dashboards:
+      enabled: true
+      provider:
+        name: default
+
+  replicas: 3
 
   env:
     GF_DATABASE_TYPE: postgres
@@ -42,6 +51,31 @@ grafana:
           database: grafana
           user: grafana
           password: grafana-secret
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus-server.monitoring-stack.svc.cluster.local:9090
+
+  dashboards:
+    default:
+      kube-state-metrics:
+        gnetId: 21742
+        revision: 1
+        datasource: Prometheus
+
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+        
 
   database:
     host: postgresql.monitoring-stack.svc.cluster.local
@@ -49,8 +83,25 @@ grafana:
     user: grafana
     password: grafana-secret
   
-  persistance:
+  persistence:
     enabled: true
+
+# https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/prometheus/values.yaml
+prometheus:
+  server:
+    fullnameOverride: prometheus-server
+    service:
+      servicePort: 9090
+  prometheus-node-exporter:
+    fullnameOverride: prometheus-node-exporter
+    hostRootFsMount:
+      enabled: false
+  prometheus-pushgateway:
+    fullnameOverride: prometheus-pushgateway
+  alertmanager:
+    fullnameOverride: prometheus-alertmanager
+  kube-state-metrics:
+    fullnameOverride: prometheus-kube-state-metrics
 
 influxdb:
   database:

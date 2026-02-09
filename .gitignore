@@ -1,3 +1,3 @@
 # Ignore all archive files in the kubernetes charts directories
-./kubernetes/**/charts/*.tgz
-./kubernetes/**/charts/*.tar.gz
+kubernetes/**/charts
+kubernetes/**/charts/*.tar.gz
