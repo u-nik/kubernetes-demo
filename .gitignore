@@ -1,3 +1,7 @@
 # Ignore all archive files in the kubernetes charts directories
 kubernetes/**/charts
 kubernetes/**/charts/*.tar.gz
+
+# Ansible
+infrastructure/ansible/inventory.ini
+infrastructure/ansible/*.retry

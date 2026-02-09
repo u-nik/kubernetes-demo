@@ -91,6 +91,22 @@ You can customize the deployment by modifying `terraform.tfvars`:
 - [Hetzner Cloud Provider Documentation](https://registry.terraform.io/providers/hetznercloud/hcloud/latest/docs)
 - [Hetzner Cloud Provider](https://registry.terraform.io/providers/hetznercloud/hcloud/latest)
 
+## Next Steps: Kubernetes Cluster Provisioning
+
+After creating the infrastructure, you can provision a Kubernetes cluster on these nodes using Ansible:
+
+```bash
+cd ../ansible
+./generate-inventory.sh
+ansible-playbook site.yml
+```
+
+This will set up a Kubernetes cluster with:
+- node-1 as the control plane (master)
+- node-2 and node-3 as worker nodes
+
+See the [Ansible README](../ansible/README.md) for detailed instructions.
+
 ## Security Notes
 
 - Never commit your `terraform.tfvars` file with real credentials
