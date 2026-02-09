@@ -1,6 +1,3 @@
-namespaceOverride: influxdb
-createNamespace: true
-
 replicaCount: 1
 
 image:

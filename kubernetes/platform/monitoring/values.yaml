@@ -1,45 +1,63 @@
 global:
-  namespaces:
-    grafana: grafana
-    influxdb: influxdb
-    postgresql: postgresql
-
   influxdb:
-    url: http://influxdb.influxdb.svc.cluster.local:8181
+    url: http://influxdb.monitoring-stack.svc.cluster.local:8181
     database: grafana
 
   postgresql:
-    host: postgresql.postgresql.svc.cluster.local
+    host: postgresql.monitoring-stack.svc.cluster.local
     database: grafana
     user: grafana
     password: grafana-secret
 
 # Subchart values can be set here and will override their defaults.
 grafana:
-  namespaceOverride: grafana
-  createNamespace: true
+  fullnameOverride: grafana
+  adminUser: admin
+  adminPassword: test123
+
+  env:
+    GF_DATABASE_TYPE: postgres
+    GF_DATABASE_HOST: postgresql.monitoring-stack.svc.cluster.local
+    GF_DATABASE_NAME: grafana
+    GF_DATABASE_USER: grafana
+    GF_DATABASE_PASSWORD: grafana-secret
+
+  ingress:
+    enabled: true
+    hosts:
+      - grafana.local
 
   datasources:
-    url: http://influxdb.influxdb.svc.cluster.local:8181
-    database: grafana
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: InfluxDB
+          type: influxdb
+          access: proxy
+          url: http://influxdb.monitoring-stack.svc.cluster.local:8181
+        - name: PostgreSQL
+          type: postgres
+          access: proxy
+          url: postgresql.monitoring-stack.svc.cluster.local:5432
+          database: grafana
+          user: grafana
+          password: grafana-secret
 
   database:
-    host: postgresql.postgresql.svc.cluster.local
+    host: postgresql.monitoring-stack.svc.cluster.local
     name: grafana
     user: grafana
     password: grafana-secret
+  
+  persistance:
+    enabled: true
 
 influxdb:
-  namespaceOverride: influxdb
-  createNamespace: true
-
   database:
     create: true
     name: grafana
 
 postgresql:
-  namespaceOverride: postgresql
-  createNamespace: true
   auth:
     database: grafana
     username: grafana

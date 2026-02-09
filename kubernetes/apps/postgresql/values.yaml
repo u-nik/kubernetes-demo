@@ -1,6 +1,3 @@
-namespaceOverride: postgresql
-createNamespace: true
-
 replicaCount: 1
 
 image:
