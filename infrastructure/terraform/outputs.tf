@@ -17,3 +17,13 @@ output "server_ipv6" {
   description = "IPv6 addresses of the created servers"
   value       = hcloud_server.node[*].ipv6_address
 }
+
+output "load_balancer_id" {
+  description = "ID of the load balancer"
+  value       = hcloud_load_balancer.main.id
+}
+
+output "load_balancer_ip" {
+  description = "Public IPv4 address of the load balancer"
+  value       = hcloud_load_balancer.main.ipv4
+}

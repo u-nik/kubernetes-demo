@@ -2,6 +2,15 @@
 # Get your token from: https://console.hetzner.cloud/
 hcloud_token = "your-hetzner-cloud-api-token-here"
 
+# 1Password Service Account token (alternatively set OP_SERVICE_ACCOUNT_TOKEN env var)
+op_service_account_token = "your-1password-service-account-token-here"
+
+# 1Password Vault UUID that contains the public SSH key
+op_vault_uuid = "your-1password-vault-uuid-here"
+
+# Provide exactly one of the following to identify the 1Password item
+# op_item_uuid  = "your-1password-item-uuid-here"
+
 # Optional: Change location (default: nbg1)
 # Available locations: nbg1, fsn1, hel1, ash, hil
 # location = "nbg1"
