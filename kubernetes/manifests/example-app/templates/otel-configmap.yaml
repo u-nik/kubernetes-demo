@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "example-app.fullname" . }}-otel-config
+  namespace: example-app
+  labels:
+    {{- include "example-app.labels" . | nindent 4 }}
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      
+      # Receiver for nginx logs to create spans
+      filelog:
+        include:
+          - /var/log/nginx/access.log
+        operators:
+          - type: regex_parser
+            regex: '^(?P<remote_addr>[^ ]*) - (?P<remote_user>[^ ]*) \[(?P<time_local>[^\]]*)\] "(?P<request>[^"]*)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "[^"]*" "[^"]*" trace_id=(?P<trace_id>[^ ]*) span_id=(?P<span_id>[^ ]*)'
+          - type: trace_parser
+            trace_id:
+              parse_from: attributes.trace_id
+            span_id:
+              parse_from: attributes.span_id
+
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 50
+      
+      # Add resource attributes
+      resource:
+        attributes:
+          - key: service.name
+            value: example-app-nginx
+            action: upsert
+          - key: service.namespace
+            value: example-app
+            action: upsert
+          - key: deployment.environment
+            value: production
+            action: upsert
+      
+      # Memory limiter
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 100
+
+    exporters:
+      otlp:
+        endpoint: {{ .Values.otelCollector.tempo.endpoint }}
+        tls:
+          insecure: true
+      
+      logging:
+        loglevel: info
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp, logging]
+        logs:
+          receivers: [filelog]
+          processors: [memory_limiter, resource, batch]
+          exporters: [logging]

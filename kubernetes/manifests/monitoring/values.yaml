@@ -9,6 +9,9 @@ global:
     user: grafana
     password: grafana-secret
 
+  tempo:
+    url: http://tempo-query-frontend.monitoring.svc.cluster.local:3100
+
 grafana:
   fullnameOverride: grafana
   adminUser: admin
@@ -54,6 +57,15 @@ grafana:
           type: prometheus
           access: proxy
           url: http://prometheus-server.monitoring.svc.cluster.local:9090
+        - name: Tempo
+          type: tempo
+          access: proxy
+          url: http://tempo-query-frontend.monitoring.svc.cluster.local:3100
+          uid: tempo
+          jsonData:
+            httpMethod: GET
+            serviceMap:
+              datasourceUid: prometheus
 
   dashboards:
     default:

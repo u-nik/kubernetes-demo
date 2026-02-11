@@ -1,0 +1,171 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "example-app.fullname" . }}-nginx-config
+  namespace: example-app
+  labels:
+    {{- include "example-app.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        # OpenTelemetry configuration
+        log_format trace '$remote_addr - $remote_user [$time_local] '
+                        '"$request" $status $body_bytes_sent '
+                        '"$http_referer" "$http_user_agent" '
+                        'trace_id=$opentelemetry_trace_id span_id=$opentelemetry_span_id';
+
+        access_log /var/log/nginx/access.log trace;
+        error_log /var/log/nginx/error.log;
+
+        sendfile on;
+        keepalive_timeout 65;
+
+        server {
+            listen 80;
+            server_name app.cluster.local;
+
+            location / {
+                root /usr/share/nginx/html;
+                index index.html;
+                add_header X-Trace-ID $request_id always;
+            }
+
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+
+            location /api {
+                default_type application/json;
+                return 200 '{"message":"Hello from traced nginx!","timestamp":"$time_iso8601","trace_id":"$request_id"}';
+            }
+        }
+    }
+  
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Example Traced Application</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 15px;
+                padding: 40px;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            }
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.5em;
+            }
+            .info {
+                background: rgba(255, 255, 255, 0.2);
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+            }
+            button {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 15px 32px;
+                text-align: center;
+                font-size: 16px;
+                margin: 10px 5px;
+                cursor: pointer;
+                border-radius: 8px;
+                transition: all 0.3s;
+                width: 100%;
+            }
+            button:hover {
+                background: #45a049;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }
+            #response {
+                background: rgba(0, 0, 0, 0.3);
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 20px;
+                min-height: 100px;
+                font-family: 'Courier New', monospace;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            .trace-info {
+                font-size: 0.9em;
+                opacity: 0.8;
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 Traced Application</h1>
+            <div class="info">
+                <p><strong>Welcome!</strong> This is a demo application instrumented with distributed tracing.</p>
+                <p>All requests to this application are traced and sent to Grafana Tempo.</p>
+                <p>View the traces in Grafana to see the request flow through the system.</p>
+            </div>
+            
+            <button onclick="makeRequest()">Make API Request</button>
+            
+            <div id="response"></div>
+            
+            <div class="info trace-info">
+                <p>💡 <strong>Tip:</strong> Each request generates a unique trace ID that you can use to find the trace in Grafana Tempo.</p>
+            </div>
+        </div>
+
+        <script>
+            async function makeRequest() {
+                const responseDiv = document.getElementById('response');
+                responseDiv.textContent = 'Making request...';
+                
+                try {
+                    const response = await fetch('/api');
+                    const data = await response.json();
+                    const traceId = response.headers.get('X-Trace-ID');
+                    
+                    responseDiv.textContent = 
+                        '✅ Response received:\n\n' +
+                        JSON.stringify(data, null, 2) +
+                        '\n\n📊 Trace ID: ' + (traceId || 'N/A') +
+                        '\n\nYou can search for this trace in Grafana Tempo!';
+                } catch (error) {
+                    responseDiv.textContent = '❌ Error: ' + error.message;
+                }
+            }
+            
+            // Make an initial request on page load
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const event = new Date().toISOString();
+                    document.getElementById('response').textContent = 
+                        '👋 Page loaded at: ' + event + '\n\n' +
+                        'Click the button above to make a traced API request.';
+                }, 500);
+            });
+        </script>
+    </body>
+    </html>

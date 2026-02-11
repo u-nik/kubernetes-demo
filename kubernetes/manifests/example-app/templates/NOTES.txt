@@ -1,0 +1,16 @@
+Example application has been deployed!
+
+To access the application:
+1. Make sure your ingress controller is configured
+2. Add the following entry to your /etc/hosts file (or equivalent):
+   <INGRESS_IP> {{ .Values.ingress.host }}
+
+3. Access the application at: http://{{ .Values.ingress.host }}
+
+The application is instrumented with OpenTelemetry and sends traces to Grafana Tempo.
+View traces in Grafana at: http://grafana.cluster.local
+
+Service endpoints:
+- Main page: http://{{ .Values.ingress.host }}/
+- API endpoint: http://{{ .Values.ingress.host }}/api
+- Health check: http://{{ .Values.ingress.host }}/health

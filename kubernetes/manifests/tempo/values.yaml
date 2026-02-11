@@ -1,0 +1,94 @@
+tempo-distributed:
+  fullnameOverride: tempo
+  
+  traces:
+    otlp:
+      grpc:
+        enabled: true
+      http:
+        enabled: true
+    zipkin:
+      enabled: true
+    jaeger:
+      thriftHttp:
+        enabled: true
+    opencensus:
+      enabled: true
+
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+  
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  serviceMonitor:
+    enabled: true
+
+  ingester:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  distributor:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+  compactor:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+  querier:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+  queryFrontend:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    query:
+      enabled: true
+      config: |
+        backend: 127.0.0.1:3100
+
+  gateway:
+    enabled: true
+    replicas: 1
+    ingress:
+      enabled: true
+      hosts:
+        - host: tempo.cluster.local
+          paths:
+            - path: /
+              pathType: Prefix
