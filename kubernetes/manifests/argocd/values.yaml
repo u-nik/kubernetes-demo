@@ -1,0 +1,20 @@
+# Argo CD values wrapper
+# Values for the argo-cd Helm chart dependency
+
+argo-cd:
+  fullnameOverride: argocd
+  global:
+    domain: argocd.cluster.local
+  configs:
+    params:
+      server.insecure: true
+    secret:
+      argocdServerAdminPassword: "$2b$12$bsAXs5OrTP1iDZAe.BaP3uMd4EfxuHejBdfN0tObK2pp8OQE1xQqW"
+      argocdServerAdminPasswordMtime: "2026-02-11T00:00:00Z"
+  server:
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      paths:
+        - /
+      pathType: Prefix

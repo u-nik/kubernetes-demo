@@ -13,7 +13,7 @@ serviceAccount:
 auth:
   username: grafana
   password: grafana-secret
-  database: storelogix
+  database: grafana
 
 service:
   type: ClusterIP

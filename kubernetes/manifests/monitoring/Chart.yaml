@@ -1,0 +1,13 @@
+apiVersion: v2
+name: monitoring
+description: Umbrella chart for monitoring stack (InfluxDB and PostgreSQL only)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+dependencies:
+  - name: influxdb
+    version: 0.1.0
+    repository: "file://../../manifests/influxdb"
+  - name: postgresql
+    version: 0.1.0
+    repository: "file://../../manifests/postgresql"

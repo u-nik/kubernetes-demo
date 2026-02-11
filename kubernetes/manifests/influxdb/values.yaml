@@ -1,4 +1,5 @@
 replicaCount: 1
+url: http://influxdb.monitoring-stack.svc.cluster.local:8181
 
 image:
   repository: influxdb

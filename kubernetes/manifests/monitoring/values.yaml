@@ -1,0 +1,16 @@
+global:
+  influxdb:
+    url: http://influxdb.monitoring.svc.cluster.local:8181
+    database: grafana
+
+  postgresql:
+    host: postgresql.monitoring.svc.cluster.local
+    database: grafana
+    user: grafana
+    password: grafana-secret
+
+postgresql:
+  auth:
+    database: grafana
+    username: grafana
+    password: grafana-secret
