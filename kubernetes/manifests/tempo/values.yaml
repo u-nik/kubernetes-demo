@@ -29,7 +29,7 @@ tempo-distributed:
     enabled: true
 
   ingester:
-    replicas: 2
+    replicas: 1
     resources:
       requests:
         cpu: 100m
@@ -37,9 +37,12 @@ tempo-distributed:
       limits:
         cpu: 500m
         memory: 512Mi
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution: []
 
   distributor:
-    replicas: 2
+    replicas: 1
     resources:
       requests:
         cpu: 100m
@@ -47,6 +50,9 @@ tempo-distributed:
       limits:
         cpu: 500m
         memory: 256Mi
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution: []
 
   compactor:
     replicas: 1
@@ -59,7 +65,7 @@ tempo-distributed:
         memory: 256Mi
 
   querier:
-    replicas: 2
+    replicas: 1
     resources:
       requests:
         cpu: 100m
@@ -67,6 +73,9 @@ tempo-distributed:
       limits:
         cpu: 500m
         memory: 256Mi
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution: []
 
   queryFrontend:
     replicas: 1
@@ -78,9 +87,7 @@ tempo-distributed:
         cpu: 500m
         memory: 256Mi
     query:
-      enabled: true
-      config: |
-        backend: 127.0.0.1:3100
+      enabled: false
 
   gateway:
     enabled: true

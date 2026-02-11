@@ -47,8 +47,6 @@ spec:
         - name: nginx-config
           mountPath: /usr/share/nginx/html/index.html
           subPath: index.html
-        - name: nginx-logs
-          mountPath: /var/log/nginx
         env:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://localhost:4318"
@@ -71,9 +69,6 @@ spec:
         - name: otel-config
           mountPath: /etc/otel-collector-config.yaml
           subPath: otel-collector-config.yaml
-        - name: nginx-logs
-          mountPath: /var/log/nginx
-          readOnly: true
         command:
         - /otelcol-contrib
         - --config=/etc/otel-collector-config.yaml
@@ -85,5 +80,3 @@ spec:
       - name: otel-config
         configMap:
           name: {{ include "example-app.fullname" . }}-otel-config
-      - name: nginx-logs
-        emptyDir: {}

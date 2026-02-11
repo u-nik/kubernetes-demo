@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "example-app.fullname" . }}-trace-generator
+  namespace: example-app
+  labels:
+    {{- include "example-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trace-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "example-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: trace-generator
+  template:
+    metadata:
+      labels:
+        {{- include "example-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: trace-generator
+    spec:
+      containers:
+      - name: trace-generator
+        image: python:3.11-slim
+        command:
+        - /bin/bash
+        - -c
+        - |
+          pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-grpc
+          python /scripts/generate-traces.py
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+      
+      - name: otel-collector
+        image: "{{ .Values.otelCollector.image.repository }}:{{ .Values.otelCollector.image.tag }}"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: otlp-grpc
+          containerPort: 4317
+          protocol: TCP
+        - name: otlp-http
+          containerPort: 4318
+          protocol: TCP
+        resources:
+          {{- toYaml .Values.otelCollector.resources | nindent 10 }}
+        volumeMounts:
+        - name: otel-config
+          mountPath: /etc/otel-collector-config.yaml
+          subPath: otel-collector-config.yaml
+        command:
+        - /otelcol-contrib
+        - --config=/etc/otel-collector-config.yaml
+      
+      volumes:
+      - name: scripts
+        configMap:
+          name: {{ include "example-app.fullname" . }}-trace-generator
+          defaultMode: 0755
+      - name: otel-config
+        configMap:
+          name: {{ include "example-app.fullname" . }}-otel-config
