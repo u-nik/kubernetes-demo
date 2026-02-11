@@ -37,9 +37,7 @@ tempo-distributed:
       limits:
         cpu: 500m
         memory: 512Mi
-    affinity:
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution: []
+    affinity: null
 
   distributor:
     replicas: 1
@@ -50,9 +48,7 @@ tempo-distributed:
       limits:
         cpu: 500m
         memory: 256Mi
-    affinity:
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution: []
+    affinity: null
 
   compactor:
     replicas: 1
@@ -73,9 +69,7 @@ tempo-distributed:
       limits:
         cpu: 500m
         memory: 256Mi
-    affinity:
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution: []
+    affinity: null
 
   queryFrontend:
     replicas: 1
