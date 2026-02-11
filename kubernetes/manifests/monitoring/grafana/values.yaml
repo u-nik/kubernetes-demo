@@ -13,11 +13,12 @@ grafana:
   replicas: 3
 
   env:
-    GF_DATABASE_TYPE: postgres
-    GF_DATABASE_HOST: postgresql.postgresql.svc.cluster.local
-    GF_DATABASE_NAME: grafana
-    GF_DATABASE_USER: grafana
-    GF_DATABASE_PASSWORD: grafana-secret
+    # Use SQLite instead of PostgreSQL for now to allow Grafana to start
+    # GF_DATABASE_TYPE: postgres
+    # GF_DATABASE_HOST: postgresql.postgresql.svc.cluster.local
+    # GF_DATABASE_NAME: grafana
+    # GF_DATABASE_USER: grafana
+    # GF_DATABASE_PASSWORD: grafana-secret
 
   ingress:
     enabled: true
