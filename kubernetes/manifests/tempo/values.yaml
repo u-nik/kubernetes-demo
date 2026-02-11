@@ -38,6 +38,7 @@ tempo-distributed:
         cpu: 500m
         memory: 512Mi
     affinity: null
+    topologySpreadConstraints: []
 
   distributor:
     replicas: 1
@@ -49,6 +50,7 @@ tempo-distributed:
         cpu: 500m
         memory: 256Mi
     affinity: null
+    topologySpreadConstraints: []
 
   compactor:
     replicas: 1
@@ -70,6 +72,7 @@ tempo-distributed:
         cpu: 500m
         memory: 256Mi
     affinity: null
+    topologySpreadConstraints: []
 
   queryFrontend:
     replicas: 1
