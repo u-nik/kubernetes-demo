@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/u-nik/kubernetes-demo.git
     targetRevision: main
-    path: kubernetes/apps/postgresql
+    path: kubernetes/manifests/postgresql
     helm:
       releaseName: postgresql
   destination:

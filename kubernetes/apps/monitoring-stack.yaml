@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: influxdb
+  name: monitoring-stack
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/u-nik/kubernetes-demo.git
     targetRevision: main
-    path: kubernetes/manifests/influxdb
+    path: kubernetes/manifests/monitoring
     helm:
-      releaseName: influxdb
+      releaseName: monitoring-stack
   destination:
     server: https://kubernetes.default.svc
-    namespace: influxdb
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
