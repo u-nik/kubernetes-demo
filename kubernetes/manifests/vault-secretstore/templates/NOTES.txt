@@ -1,0 +1,35 @@
+Vault SecretStore has been configured!
+
+The following resources have been created:
+
+{{- if .Values.secretStore.enabled }}
+- SecretStore: vault-secretstore (namespace: {{ .Values.secretStore.namespace }})
+{{- end }}
+{{- if .Values.clusterSecretStore.enabled }}
+- ClusterSecretStore: vault-cluster-secretstore (cluster-wide)
+{{- end }}
+
+Vault Configuration:
+- Server: {{ .Values.vault.server }}
+- Path: {{ .Values.vault.path }}
+- Version: v{{ .Values.vault.version }}
+
+Next steps:
+
+1. Ensure your Vault token secret exists:
+   kubectl get secret {{ .Values.vault.auth.tokenSecretRef.name }} -n {{ .Values.vault.auth.tokenSecretRef.namespace }}
+
+2. Verify the SecretStore is ready:
+   kubectl get secretstore -n {{ .Values.secretStore.namespace }}
+   {{- if .Values.clusterSecretStore.enabled }}
+   kubectl get clustersecretstore
+   {{- end }}
+
+3. Create secrets in Vault at: {{ .Values.vault.server }}/ui/vault/secrets/{{ .Values.vault.path }}/list
+
+4. Create ExternalSecrets to sync from Vault to Kubernetes
+
+For Docker Desktop users:
+The address "host.docker.internal:8200" allows containers to access services on your host machine.
+
+Documentation: https://external-secrets.io/latest/provider/hashicorp-vault/

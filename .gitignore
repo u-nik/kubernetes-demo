@@ -2,6 +2,18 @@
 kubernetes/**/charts
 kubernetes/**/charts/*.tar.gz
 
+# Central Configuration - NEVER commit real credentials!
+config/values.yaml
+
+# Vault - NEVER commit tokens or credentials!
+.vault-token
+vault-token.txt
+
+# Kubernetes Secrets - NEVER commit real credentials!
+kubernetes/secrets/*-credentials.yaml
+kubernetes/secrets/*-token.yaml
+kubernetes/secrets/*.secret.yaml
+
 # Ansible
 infrastructure/ansible/inventory.ini
 infrastructure/ansible/*.retry

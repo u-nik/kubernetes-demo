@@ -1,0 +1,44 @@
+# ArgoCD Git Credentials Configuration
+
+# Enable/disable the git credentials secret
+enabled: true
+
+# Target namespace where the secret will be created (should be argocd)
+namespace: argocd
+
+# Source for credentials: "direct" or "vault"
+# - direct: Create secret directly with credentials (requires repository.auth values)
+# - vault: Use External Secrets Operator to fetch from Vault
+source: vault
+
+# Git repository configuration
+repository:
+  # Repository URL (e.g., https://bitbucket.org/storelogix/kubernetes-demo.git)
+  url: "https://bitbucket.org/storelogix/kubernetes-demo.git"
+  
+  # Direct authentication credentials (only used when source=direct)
+  auth:
+    # Bitbucket username
+    username: ""
+    
+    # Bitbucket App Password or Personal Access Token
+    token: ""
+    
+    # Type of authentication: token or password
+    type: token
+
+# Vault configuration (only used when source=vault)
+vault:
+  # SecretStore reference
+  secretStore:
+    name: "vault-secretstore"
+    kind: "SecretStore"  # or "ClusterSecretStore"
+  
+  # Vault path for git credentials
+  # For KV v2: path should be like "git/bitbucket"
+  # Vault will look for keys: username, password, url
+  path: "git/bitbucket"
+  
+  # Refresh interval for syncing from Vault
+  refreshInterval: "1h"
+

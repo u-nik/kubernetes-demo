@@ -1,0 +1,24 @@
+# Central Repository Configuration
+# Copy this file to values.yaml and fill in your actual credentials
+# values.yaml is gitignored and will not be committed
+
+repository:
+  # Repository URL for Bitbucket
+  url: https://bitbucket.org/storelogix/kubernetes-demo.git
+  
+  # Authentication for Bitbucket
+  # For token-based authentication (recommended):
+  auth:
+    # Bitbucket username
+    username: "your-bitbucket-username"
+    
+    # Bitbucket App Password or Personal Access Token
+    # Create one at: https://bitbucket.org/account/settings/app-passwords/
+    # Required scopes: repository:read
+    token: "your-bitbucket-app-password-or-token"
+    
+    # Type of authentication: token (recommended) or password
+    type: token
+
+# Target revision/branch for ArgoCD applications
+targetRevision: main

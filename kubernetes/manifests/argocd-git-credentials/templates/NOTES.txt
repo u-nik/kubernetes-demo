@@ -1,0 +1,19 @@
+ArgoCD Git Credentials have been configured!
+
+The secret "git-repository-credentials" has been created in the {{ .Values.namespace }} namespace.
+
+This secret is configured for {{ .Values.repository.auth.type }}-based authentication to:
+{{ .Values.repository.url }}
+
+ArgoCD will automatically use these credentials for all applications that reference this repository.
+
+To verify the secret was created:
+  kubectl get secret git-repository-credentials -n {{ .Values.namespace }}
+
+To check ArgoCD's repository status:
+  kubectl get secret -n argocd -l argocd.argoproj.io/secret-type=repository
+
+SECURITY NOTE:
+- Never commit the actual config/values.yaml file with credentials!
+- Only commit config/values.yaml.example as a template
+- Use Bitbucket App Passwords with minimal required scopes (repository:read)

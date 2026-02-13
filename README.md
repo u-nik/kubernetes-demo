@@ -92,6 +92,35 @@ helm install influxdb ./kubernetes/apps/influxdb
 helm install monitoring ./kubernetes/platform/monitoring
 ```
 
+### 6. Configure Secret Management with Vault
+
+This repository uses **HashiCorp Vault** for secure secret management:
+
+```bash
+# Initialize Vault with credentials
+./init-vault.sh
+
+# Deploy Vault integration
+./deploy-vault-integration.sh
+
+# Apply the configurations
+kubectl apply -f kubernetes/apps/vault-secretstore.yaml
+kubectl apply -f kubernetes/apps/argocd-git-credentials.yaml
+```
+
+See [VAULT-SETUP.md](VAULT-SETUP.md) for detailed instructions.
+
+#### Alternative: Local Configuration Files
+
+For quick local development only (not recommended for production):
+
+1. Copy `config/values.yaml.example` to `config/values.yaml`
+2. Fill in your credentials
+3. Update `source: direct` in argocd-git-credentials values.yaml
+4. Deploy: `kubectl apply -f kubernetes/apps/argocd-git-credentials.yaml`
+
+See [REPOSITORY-SETUP.md](REPOSITORY-SETUP.md) for details.
+
 ## Directory Structure
 
 ```

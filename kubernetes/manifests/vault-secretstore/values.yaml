@@ -1,0 +1,33 @@
+# Vault SecretStore Configuration
+
+# Enable/disable individual SecretStores
+secretStore:
+  enabled: true
+  namespace: argocd
+
+clusterSecretStore:
+  enabled: true
+
+# Vault connection configuration
+vault:
+  # Server address - use host.docker.internal for Docker Desktop to access host machine
+  server: "http://host.docker.internal:8200"
+  
+  # Path prefix for secrets in Vault (KV v2 engine)
+  # Default KV v2 path is: secret/data/<path>
+  path: "secret"
+  
+  # KV engine version (1 or 2)
+  version: 2
+  
+  # Namespace (Vault Enterprise feature, leave empty for OSS)
+  namespace: ""
+  
+  # Authentication method
+  auth:
+    # Token-based authentication secret
+    # This secret should contain the Vault token
+    tokenSecretRef:
+      name: "vault-token"
+      key: "token"
+      namespace: "argocd"

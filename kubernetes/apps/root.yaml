@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/u-nik/kubernetes-demo.git
+    repoURL: https://bitbucket.org/storelogix/kubernetes-demo.git
     targetRevision: main
     path: kubernetes/apps
     directory:

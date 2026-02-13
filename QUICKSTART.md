@@ -24,7 +24,7 @@ This guide will help you deploy a complete Kubernetes cluster on Hetzner Cloud i
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/u-nik/kubernetes-demo.git
+git clone https://bitbucket.org/storelogix/kubernetes-demo.git
 cd kubernetes-demo
 ```
 
