@@ -1,0 +1,291 @@
+---
+- name: Initialize Kubernetes cluster stack
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    bootstrap_argocd_namespace: "{{ argocd_namespace | default('argocd') }}"
+    bootstrap_vault_addr: "{{ vault_addr | default('http://localhost:8200') }}"
+    bootstrap_vault_token: "{{ vault_token | default('myroot') }}"
+    bootstrap_repo_url: "{{ repo_url | default('https://bitbucket.org/storelogix/kubernetes-demo.git') }}"
+    root_dir: "{{ playbook_dir | dirname }}"
+
+  vars_prompt:
+    - name: bitbucket_username
+      prompt: Bitbucket Username
+      private: false
+    - name: bitbucket_token
+      prompt: Bitbucket App Password/Token
+      private: true
+
+  tasks:
+    - name: Resolve Bitbucket auth username
+      ansible.builtin.set_fact:
+        bitbucket_auth_username: "{{ 'x-token-auth' if (bitbucket_token | default('') | regex_search('^ATAT')) else bitbucket_username }}"
+      no_log: true
+
+    - name: Check required commands are available
+      ansible.builtin.shell: "command -v {{ item }}"
+      args:
+        executable: /bin/bash
+      changed_when: false
+      loop:
+        - kubectl
+        - helm
+        - curl
+        - docker
+
+    - name: Verify Kubernetes connectivity
+      ansible.builtin.command: kubectl cluster-info
+      changed_when: false
+
+    - name: Check Vault health endpoint
+      ansible.builtin.uri:
+        url: "{{ bootstrap_vault_addr }}/v1/sys/health"
+        method: GET
+        return_content: false
+        status_code: [200, 429, 472, 473, 501, 503]
+      register: vault_health
+      failed_when: false
+      changed_when: false
+
+    - name: Start local dev Vault container if Vault is unreachable
+      ansible.builtin.shell: |
+        docker stop vault >/dev/null 2>&1 || true
+        docker rm vault >/dev/null 2>&1 || true
+        docker run -d --name vault \
+          --cap-add=IPC_LOCK \
+          -e VAULT_DEV_ROOT_TOKEN_ID={{ bootstrap_vault_token | quote }} \
+          -p 8200:8200 \
+          hashicorp/vault >/dev/null
+      args:
+        executable: /bin/bash
+      when: vault_health.status is not defined
+
+    - name: Wait for Vault API to become reachable
+      ansible.builtin.uri:
+        url: "{{ bootstrap_vault_addr }}/v1/sys/health"
+        method: GET
+        return_content: false
+        status_code: [200, 429, 472, 473, 501, 503]
+      register: vault_health_wait
+      retries: 30
+      delay: 2
+      until: vault_health_wait.status is defined
+      changed_when: false
+
+    - name: Read enabled Vault secrets engines
+      ansible.builtin.command: >-
+        docker exec -e VAULT_ADDR=http://127.0.0.1:8200
+        -e VAULT_TOKEN={{ bootstrap_vault_token }}
+        vault vault secrets list
+      register: vault_secrets
+      changed_when: false
+
+    - name: Enable Vault KV v2 engine at secret/
+      ansible.builtin.command: >-
+        docker exec -e VAULT_ADDR=http://127.0.0.1:8200
+        -e VAULT_TOKEN={{ bootstrap_vault_token }}
+        vault vault secrets enable -version=2 -path=secret kv
+      when: "'secret/' not in vault_secrets.stdout"
+
+    - name: Store git credentials in Vault
+      ansible.builtin.command: >-
+        docker exec -e VAULT_ADDR=http://127.0.0.1:8200
+        -e VAULT_TOKEN={{ bootstrap_vault_token }}
+        vault vault kv put secret/git/bitbucket
+        url={{ bootstrap_repo_url }}
+        username={{ bitbucket_auth_username }}
+        password={{ bitbucket_token }}
+      no_log: true
+
+    - name: Validate Bitbucket credentials against repository
+      ansible.builtin.shell: |
+        git ls-remote "https://{{ bitbucket_auth_username }}:{{ bitbucket_token }}@{{ bootstrap_repo_url | regex_replace('^https://', '') }}" HEAD >/dev/null
+      args:
+        executable: /bin/bash
+      changed_when: false
+      no_log: true
+
+    - name: Add Helm repositories
+      ansible.builtin.command: "{{ item }}"
+      changed_when: false
+      loop:
+        - helm repo add traefik https://traefik.github.io/charts --force-update
+        - helm repo add external-secrets https://charts.external-secrets.io --force-update
+        - helm repo update
+
+    - name: Ensure External Secrets CRDs are applied
+      ansible.builtin.shell: |
+        eso_crds="$(helm show crds external-secrets/external-secrets || true)"
+        if [[ -n "${eso_crds}" ]]; then
+          printf '%s\n' "${eso_crds}" | kubectl apply -f -
+        else
+          echo "No CRDs returned by helm show crds; skipping pre-apply."
+        fi
+      args:
+        executable: /bin/bash
+      register: eso_crds_apply
+      changed_when: "'created' in eso_crds_apply.stdout or 'configured' in eso_crds_apply.stdout"
+
+    - name: Install or upgrade Traefik
+      ansible.builtin.command: >-
+        helm upgrade --install traefik traefik/traefik
+        -n kube-system
+        --create-namespace
+      changed_when: false
+
+    - name: Update Helm dependencies for ArgoCD chart
+      ansible.builtin.command: "helm dependency update {{ root_dir }}/kubernetes/manifests/argocd"
+      changed_when: false
+
+    - name: Install or upgrade ArgoCD
+      ansible.builtin.command: >-
+        helm upgrade --install argocd {{ root_dir }}/kubernetes/manifests/argocd
+        -n {{ bootstrap_argocd_namespace }}
+        --create-namespace
+      changed_when: false
+
+    - name: Wait for ArgoCD server deployment
+      ansible.builtin.command: >-
+        kubectl wait --for=condition=available deployment/argocd-server
+        -n {{ bootstrap_argocd_namespace }}
+        --timeout=300s
+      changed_when: false
+
+    - name: Apply bootstrap ArgoCD repository credential secret
+      ansible.builtin.shell: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: git-repository-credentials
+          namespace: {{ bootstrap_argocd_namespace }}
+          labels:
+            argocd.argoproj.io/secret-type: repository
+        type: Opaque
+        stringData:
+          type: git
+          url: {{ bootstrap_repo_url }}
+          username: {{ bitbucket_auth_username }}
+          password: {{ bitbucket_token }}
+        EOF
+      args:
+        executable: /bin/bash
+      register: repo_secret_apply
+      changed_when: "'created' in repo_secret_apply.stdout or 'configured' in repo_secret_apply.stdout"
+      no_log: true
+
+    - name: Apply Vault token secret for SecretStore auth
+      ansible.builtin.shell: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: vault-token
+          namespace: {{ bootstrap_argocd_namespace }}
+        type: Opaque
+        stringData:
+          token: {{ bootstrap_vault_token }}
+        EOF
+      args:
+        executable: /bin/bash
+      register: vault_token_secret_apply
+      changed_when: "'created' in vault_token_secret_apply.stdout or 'configured' in vault_token_secret_apply.stdout"
+      no_log: true
+
+    - name: Install or upgrade External Secrets Operator
+      ansible.builtin.command: >-
+        helm upgrade --install external-secrets external-secrets/external-secrets
+        -n external-secrets-system
+        --set installCRDs=true
+        --create-namespace
+      changed_when: false
+
+    - name: Wait for External Secrets Operator deployment
+      ansible.builtin.command: >-
+        kubectl wait --for=condition=available deployment/external-secrets
+        -n external-secrets-system
+        --timeout=300s
+      changed_when: false
+
+    - name: Wait for External Secrets webhook deployment
+      ansible.builtin.command: >-
+        kubectl wait --for=condition=available deployment/external-secrets-webhook
+        -n external-secrets-system
+        --timeout=300s
+      changed_when: false
+
+    - name: Wait for External Secrets cert-controller deployment
+      ansible.builtin.command: >-
+        kubectl wait --for=condition=available deployment/external-secrets-cert-controller
+        -n external-secrets-system
+        --timeout=300s
+      changed_when: false
+
+    - name: Wait for External Secrets webhook endpoints
+      ansible.builtin.command: >-
+        kubectl get endpoints external-secrets-webhook
+        -n external-secrets-system
+        -o jsonpath={.subsets[0].addresses[0].ip}
+      register: eso_webhook_endpoints
+      changed_when: false
+      retries: 30
+      delay: 2
+      until: eso_webhook_endpoints.stdout is match('^\\d+\\.\\d+\\.\\d+\\.\\d+$')
+
+    - name: Wait for External Secrets CRDs
+      ansible.builtin.command: kubectl get crd {{ item }}
+      register: eso_crd_check
+      changed_when: false
+      retries: 30
+      delay: 2
+      until: eso_crd_check.rc == 0
+      loop:
+        - externalsecrets.external-secrets.io
+        - secretstores.external-secrets.io
+        - clustersecretstores.external-secrets.io
+
+    - name: Install or upgrade Vault SecretStore chart
+      ansible.builtin.command: >-
+        helm upgrade --install vault-secretstore {{ root_dir }}/kubernetes/manifests/vault-secretstore
+        -n {{ bootstrap_argocd_namespace }}
+        --create-namespace
+      changed_when: false
+
+    - name: Install or upgrade ArgoCD git credentials chart
+      ansible.builtin.command: >-
+        helm upgrade --install argocd-git-credentials {{ root_dir }}/kubernetes/manifests/argocd-git-credentials
+        -n {{ bootstrap_argocd_namespace }}
+        --create-namespace
+      changed_when: false
+
+    - name: Apply ArgoCD applications
+      ansible.builtin.command: "kubectl apply -f {{ item }}"
+      changed_when: false
+      loop:
+        - "{{ root_dir }}/kubernetes/apps/vault-secretstore.yaml"
+        - "{{ root_dir }}/kubernetes/apps/argocd-git-credentials.yaml"
+        - "{{ root_dir }}/kubernetes/apps/root.yaml"
+
+    - name: Force ArgoCD app refresh
+      ansible.builtin.command: >-
+        kubectl annotate application {{ item }}
+        -n {{ bootstrap_argocd_namespace }}
+        argocd.argoproj.io/refresh=hard --overwrite
+      changed_when: false
+      failed_when: false
+      loop:
+        - root-apps
+        - argocd-git-credentials
+
+    - name: Show verification commands
+      ansible.builtin.debug:
+        msg:
+          - "Cluster initialization complete."
+          - "kubectl get pods -n kube-system"
+          - "kubectl get pods -n {{ bootstrap_argocd_namespace }}"
+          - "kubectl get applications -n {{ bootstrap_argocd_namespace }}"
+          - "kubectl get secret git-repository-credentials -n {{ bootstrap_argocd_namespace }}"
+          - "kubectl get externalsecret -n {{ bootstrap_argocd_namespace }}"

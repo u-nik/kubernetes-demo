@@ -5,6 +5,7 @@ This repository demonstrates a complete Kubernetes cluster setup on Hetzner Clou
 ## Overview
 
 The setup consists of:
+
 - **Infrastructure**: 3 Ubuntu 24.04 servers on Hetzner Cloud (managed with Terraform)
 - **Kubernetes Cluster**: 1 master node + 2 worker nodes (provisioned with Ansible)
 - **Applications**: Sample Helm charts for PostgreSQL, InfluxDB, and monitoring
@@ -47,6 +48,7 @@ terraform apply
 ```
 
 This creates:
+
 - 3 Ubuntu 24.04 servers (cx33: 4 vCPU, 16 GB RAM each)
 - 1 load balancer
 - SSH key configuration
@@ -60,6 +62,7 @@ ansible-playbook site.yml
 ```
 
 This installs and configures:
+
 - Container runtime (containerd)
 - Kubernetes v1.29 (kubeadm, kubelet, kubectl)
 - Calico CNI network plugin
@@ -97,15 +100,11 @@ helm install monitoring ./kubernetes/platform/monitoring
 This repository uses **HashiCorp Vault** for secure secret management:
 
 ```bash
-# Initialize Vault with credentials
-./init-vault.sh
+# Full cluster bootstrap (Traefik + ArgoCD + Vault integration)
+./init-cluster.sh
 
-# Deploy Vault integration
-./deploy-vault-integration.sh
-
-# Apply the configurations
-kubectl apply -f kubernetes/apps/vault-secretstore.yaml
-kubectl apply -f kubernetes/apps/argocd-git-credentials.yaml
+# Alternative with Ansible
+ansible-playbook -i ansible/inventory.ini ansible/init-cluster.yml
 ```
 
 See [VAULT-SETUP.md](VAULT-SETUP.md) for detailed instructions.
@@ -170,11 +169,12 @@ See [infrastructure/ansible/README.md](infrastructure/ansible/README.md) for det
 ## Cost Estimation
 
 Current configuration (approximate monthly costs):
+
 - 3x cx33 servers: ~3 × €15 = €45/month
 - 1x lb11 load balancer: ~€5/month
 - **Total**: ~€50/month
 
-*Prices as of 2024. Check [Hetzner pricing](https://www.hetzner.com/cloud#pricing) for current rates.*
+_Prices as of 2024. Check [Hetzner pricing](https://www.hetzner.com/cloud#pricing) for current rates._
 
 ## Customization
 
@@ -193,7 +193,7 @@ Available types: cx22, cx33, cx42, cpx21, cpx31, cpx41, cpx51
 Edit `infrastructure/ansible/01-prepare-nodes.yml`:
 
 ```yaml
-repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /"
+repo: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /'
 ```
 
 ### Change CNI Plugin

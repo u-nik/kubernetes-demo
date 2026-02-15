@@ -18,11 +18,11 @@ For a complete automated setup, see [VAULT-SETUP.md](../../../VAULT-SETUP.md).
 ```bash
 # Initialize Vault and store credentials
 ./init-vault.ps1  # Windows PowerShell
-./init-vault.sh   # Linux/Mac/WSL
+./init-cluster.sh # Linux/Mac/WSL
 
 # Deploy to Kubernetes
 ./deploy-vault-integration.ps1  # Windows PowerShell
-./deploy-vault-integration.sh   # Linux/Mac/WSL
+# (included in init-cluster.sh for Linux/Mac/WSL)
 ```
 
 ## 📊 Architecture
@@ -62,16 +62,19 @@ For a complete automated setup, see [VAULT-SETUP.md](../../../VAULT-SETUP.md).
 ### ExternalSecret not syncing
 
 Check the ExternalSecret status:
+
 ```bash
 kubectl describe externalsecret argocd-git-credentials -n argocd
 ```
 
 Look for error messages in the status conditions. Common issues:
+
 - Vault path not found
 - Invalid token
 - Network connectivity
 
 Force a sync:
+
 ```bash
 kubectl annotate externalsecret argocd-git-credentials -n argocd \
   force-sync=$(date +%s) --overwrite
@@ -80,11 +83,13 @@ kubectl annotate externalsecret argocd-git-credentials -n argocd \
 ### SecretStore not ready
 
 Check SecretStore status:
+
 ```bash
 kubectl describe secretstore vault-secretstore -n argocd
 ```
 
 Verify Vault connectivity:
+
 ```bash
 # Test from a pod
 kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
@@ -92,6 +97,7 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 ```
 
 Check External Secrets Operator logs:
+
 ```bash
 kubectl logs -n external-secrets-system \
   -l app.kubernetes.io/name=external-secrets --tail=50
@@ -102,6 +108,7 @@ kubectl logs -n external-secrets-system \
 For Docker Desktop, ensure you're using `host.docker.internal:8200` in the SecretStore configuration.
 
 Verify the Vault token secret exists:
+
 ```bash
 kubectl get secret vault-token -n argocd -o yaml
 ```
@@ -111,6 +118,7 @@ kubectl get secret vault-token -n argocd -o yaml
 ### Example: Database Credentials
 
 Store in Vault:
+
 ```bash
 export VAULT_ADDR="http://localhost:8200"
 export VAULT_TOKEN="myroot"
@@ -122,35 +130,37 @@ vault kv put secret/database/postgresql \
 ```
 
 Create ExternalSecret:
+
 ```yaml
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: postgresql-credentials
-  namespace: default
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: vault-cluster-secretstore
-    kind: ClusterSecretStore
-  target:
     name: postgresql-credentials
-  data:
-  - secretKey: username
-    remoteRef:
-      key: database/postgresql
-      property: username
-  - secretKey: password
-    remoteRef:
-      key: database/postgresql
-      property: password
-  - secretKey: host
-    remoteRef:
-      key: database/postgresql
-      property: host
+    namespace: default
+spec:
+    refreshInterval: 1h
+    secretStoreRef:
+        name: vault-cluster-secretstore
+        kind: ClusterSecretStore
+    target:
+        name: postgresql-credentials
+    data:
+        - secretKey: username
+          remoteRef:
+              key: database/postgresql
+              property: username
+        - secretKey: password
+          remoteRef:
+              key: database/postgresql
+              property: password
+        - secretKey: host
+          remoteRef:
+              key: database/postgresql
+              property: host
 ```
 
 Apply and verify:
+
 ```bash
 kubectl apply -f postgresql-externalsecret.yaml
 kubectl get externalsecret postgresql-credentials -n default
@@ -160,6 +170,7 @@ kubectl get secret postgresql-credentials -n default
 ### Example: TLS Certificates
 
 Store in Vault:
+
 ```bash
 vault kv put secret/tls/example-com \
   tls.crt="$(cat cert.pem)" \
@@ -167,35 +178,37 @@ vault kv put secret/tls/example-com \
 ```
 
 Create ExternalSecret:
+
 ```yaml
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: tls-certificate
-  namespace: default
+    name: tls-certificate
+    namespace: default
 spec:
-  refreshInterval: 24h
-  secretStoreRef:
-    name: vault-cluster-secretstore
-    kind: ClusterSecretStore
-  target:
-    name: tls-secret
-    template:
-      type: kubernetes.io/tls
-  data:
-  - secretKey: tls.crt
-    remoteRef:
-      key: tls/example-com
-      property: tls.crt
-  - secretKey: tls.key
-    remoteRef:
-      key: tls/example-com
-      property: tls.key
+    refreshInterval: 24h
+    secretStoreRef:
+        name: vault-cluster-secretstore
+        kind: ClusterSecretStore
+    target:
+        name: tls-secret
+        template:
+            type: kubernetes.io/tls
+    data:
+        - secretKey: tls.crt
+          remoteRef:
+              key: tls/example-com
+              property: tls.crt
+        - secretKey: tls.key
+          remoteRef:
+              key: tls/example-com
+              property: tls.key
 ```
 
 ### Example: API Keys with Templating
 
 Store in Vault:
+
 ```bash
 vault kv put secret/api/service-a \
   api_key="abc123" \
@@ -203,36 +216,37 @@ vault kv put secret/api/service-a \
 ```
 
 Create ExternalSecret with template:
+
 ```yaml
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: api-config
-  namespace: default
+    name: api-config
+    namespace: default
 spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: vault-cluster-secretstore
-    kind: ClusterSecretStore
-  target:
-    name: api-config-secret
-    template:
-      data:
-        # Template to create a config file
-        config.yaml: |
-          api:
-            key: {{ .api_key }}
-            secret: {{ .api_secret }}
-            endpoint: https://api.service-a.com
-  data:
-  - secretKey: api_key
-    remoteRef:
-      key: api/service-a
-      property: api_key
-  - secretKey: api_secret
-    remoteRef:
-      key: api/service-a
-      property: api_secret
+    refreshInterval: 1h
+    secretStoreRef:
+        name: vault-cluster-secretstore
+        kind: ClusterSecretStore
+    target:
+        name: api-config-secret
+        template:
+            data:
+                # Template to create a config file
+                config.yaml: |
+                    api:
+                      key: {{ .api_key }}
+                      secret: {{ .api_secret }}
+                      endpoint: https://api.service-a.com
+    data:
+        - secretKey: api_key
+          remoteRef:
+              key: api/service-a
+              property: api_key
+        - secretKey: api_secret
+          remoteRef:
+              key: api/service-a
+              property: api_secret
 ```
 
 ## 🔐 Security Best Practices

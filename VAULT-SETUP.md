@@ -5,6 +5,7 @@ This guide explains how to use HashiCorp Vault as the secret manager for ArgoCD 
 ## 🎯 Overview
 
 Instead of storing credentials in local `values.yaml` files, this setup uses:
+
 - **HashiCorp Vault** running on your host machine (localhost:8200)
 - **External Secrets Operator** in Kubernetes to sync secrets from Vault
 - **Docker Desktop networking** (`host.docker.internal`) to allow containers to access the host
@@ -61,15 +62,14 @@ Instead of storing credentials in local `values.yaml` files, this setup uses:
 ### Option 1: Automated Setup (Recommended)
 
 #### For Bash/WSL:
-```bash
-# Initialize Vault with git credentials
-./init-vault.sh
 
-# Deploy to Kubernetes
-./deploy-vault-integration.sh
+```bash
+# Full cluster bootstrap (Traefik + ArgoCD + Vault integration)
+./init-cluster.sh
 ```
 
 #### For PowerShell:
+
 ```powershell
 # Initialize Vault with git credentials
 .\init-vault.ps1
@@ -91,7 +91,7 @@ docker run -d --name vault \
   hashicorp/vault
 ```
 
-Vault will be available at: http://localhost:8200  
+Vault will be available at: http://localhost:8200
 Root token: `myroot`
 
 #### Step 2: Create Bitbucket App Password
@@ -122,6 +122,7 @@ vault kv get secret/git/bitbucket
 ```
 
 Or use the Vault UI at http://localhost:8200/ui:
+
 1. Login with token: `myroot`
 2. Navigate to **secret** (KV v2)
 3. Create secret at path: `git/bitbucket`
@@ -147,6 +148,7 @@ kubectl get clustersecretstore vault-cluster-secretstore
 ```
 
 Expected output:
+
 ```
 NAME                AGE   STATUS   CAPABILITIES   READY
 vault-secretstore   10s   Valid    ReadWrite      True
@@ -169,6 +171,7 @@ kubectl get secret git-repository-credentials -n argocd
 ## 🔍 Verification
 
 ### Check Vault Connection
+
 ```bash
 # From your host
 curl http://localhost:8200/v1/sys/health
@@ -179,6 +182,7 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 ```
 
 ### Check SecretStore Status
+
 ```bash
 # Check if SecretStore is ready
 kubectl get secretstore vault-secretstore -n argocd -o yaml
@@ -190,6 +194,7 @@ kubectl get clustersecretstore vault-cluster-secretstore -o yaml
 ```
 
 ### Check ExternalSecret Status
+
 ```bash
 # Get ExternalSecret status
 kubectl get externalsecret argocd-git-credentials -n argocd
@@ -205,6 +210,7 @@ kubectl get secret git-repository-credentials -n argocd -o yaml | grep argocd
 ```
 
 ### Check ArgoCD
+
 ```bash
 # Check if ArgoCD sees the repository
 kubectl get applications -n argocd
@@ -220,6 +226,7 @@ kubectl logs -n argocd -l app.kubernetes.io/name=argocd-server --tail=50
 **Symptom**: SecretStore status shows connection errors
 
 **Solution**:
+
 ```bash
 # Test connectivity from a pod
 kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
@@ -234,6 +241,7 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 **Symptom**: SecretStore shows "permission denied" or "invalid token"
 
 **Solution**:
+
 ```bash
 # Verify the token in Kubernetes
 kubectl get secret vault-token -n argocd -o jsonpath='{.data.token}' | base64 -d
@@ -248,6 +256,7 @@ kubectl create secret generic vault-token -n argocd --from-literal=token=myroot
 **Symptom**: ExternalSecret exists but secret is not created
 
 **Solution**:
+
 ```bash
 # Check ExternalSecret events
 kubectl describe externalsecret argocd-git-credentials -n argocd
@@ -265,6 +274,7 @@ kubectl annotate externalsecret argocd-git-credentials -n argocd \
 **Symptom**: "secret not found" errors
 
 **Solution**:
+
 ```bash
 # Verify the secret exists in Vault
 export VAULT_ADDR="http://localhost:8200"
@@ -283,6 +293,7 @@ vault kv get secret/git/bitbucket
 **For Mac**: `host.docker.internal` should work by default
 
 **For Linux** (if using Docker Desktop for Linux):
+
 ```bash
 # Add host.docker.internal to /etc/hosts
 echo "172.17.0.1 host.docker.internal" | sudo tee -a /etc/hosts
@@ -291,11 +302,13 @@ echo "172.17.0.1 host.docker.internal" | sudo tee -a /etc/hosts
 ## 🔒 Security Best Practices
 
 ### For Development
+
 - ✅ Use dev mode with root token (already configured)
 - ✅ Store token in Kubernetes secret (not in code)
 - ✅ Use `host.docker.internal` for local access
 
 ### For Production
+
 - ⚠️ **Never use dev mode** - Initialize Vault properly with Shamir sealing
 - ⚠️ **Use AppRole or Kubernetes auth** instead of root tokens
 - ⚠️ **Use TLS** for Vault connections
@@ -335,11 +348,13 @@ vault:
 ## 🎯 Quick Reference
 
 ### Vault Paths
+
 - **Credentials location**: `secret/git/bitbucket`
 - **API path (KV v2)**: `secret/data/git/bitbucket`
 - **UI path**: http://localhost:8200/ui/vault/secrets/secret/show/git/bitbucket
 
 ### Important Commands
+
 ```bash
 # View Vault secrets
 vault kv get secret/git/bitbucket
@@ -360,12 +375,12 @@ kubectl get secretstore,clustersecretstore,externalsecret -A
 
 ## 🆚 Comparison: Vault vs Local Files
 
-| Feature | Local values.yaml | Vault |
-|---------|------------------|-------|
-| Security | ⚠️ File-based | ✅ Centralized secret mgmt |
-| Rotation | ❌ Manual file update | ✅ Update in Vault, auto-sync |
-| Audit | ❌ Git history only | ✅ Full audit log |
-| Sharing | ⚠️ File distribution | ✅ Central access |
-| Production-ready | ❌ Not recommended | ✅ Yes |
-| Complexity | ✅ Simple | ⚠️ More components |
-| Offline work | ✅ Yes | ❌ Requires Vault |
+| Feature          | Local values.yaml     | Vault                         |
+| ---------------- | --------------------- | ----------------------------- |
+| Security         | ⚠️ File-based         | ✅ Centralized secret mgmt    |
+| Rotation         | ❌ Manual file update | ✅ Update in Vault, auto-sync |
+| Audit            | ❌ Git history only   | ✅ Full audit log             |
+| Sharing          | ⚠️ File distribution  | ✅ Central access             |
+| Production-ready | ❌ Not recommended    | ✅ Yes                        |
+| Complexity       | ✅ Simple             | ⚠️ More components            |
+| Offline work     | ✅ Yes                | ❌ Requires Vault             |

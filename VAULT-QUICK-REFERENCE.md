@@ -4,27 +4,20 @@ Quick commands and workflows for working with Vault and Kubernetes secrets.
 
 ## 🚀 Initial Setup (One Time)
 
-### 1. Start Vault
+### 1. Run full cluster bootstrap
+
 ```powershell
 # PowerShell
 .\init-vault.ps1
 
 # Bash/WSL
-./init-vault.sh
-```
-
-### 2. Deploy to Kubernetes
-```powershell
-# PowerShell
-.\deploy-vault-integration.ps1
-
-# Bash/WSL
-./deploy-vault-integration.sh
+./init-cluster.sh
 ```
 
 ## 📋 Daily Commands
 
 ### Vault Access
+
 ```bash
 # Set environment variables
 export VAULT_ADDR="http://localhost:8200"
@@ -36,6 +29,7 @@ export VAULT_TOKEN="myroot"
 ```
 
 ### View Secrets in Vault
+
 ```bash
 # List all secrets
 vault kv list secret/
@@ -48,6 +42,7 @@ vault kv get -format=json secret/git/bitbucket
 ```
 
 ### Update Credentials
+
 ```bash
 # Update git credentials
 vault kv put secret/git/bitbucket \
@@ -63,6 +58,7 @@ vault kv put secret/myapp/database \
 ```
 
 ### Check Kubernetes Sync Status
+
 ```bash
 # Check SecretStore status
 kubectl get secretstore -n argocd
@@ -79,6 +75,7 @@ kubectl get secret git-repository-credentials -n argocd
 ```
 
 ### Force Secret Sync
+
 ```bash
 # If secret doesn't update automatically
 kubectl annotate externalsecret argocd-git-credentials -n argocd \
@@ -88,6 +85,7 @@ kubectl annotate externalsecret argocd-git-credentials -n argocd \
 ## 🔧 Troubleshooting
 
 ### Check Vault Connectivity
+
 ```bash
 # From host
 curl http://localhost:8200/v1/sys/health
@@ -98,6 +96,7 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 ```
 
 ### Check External Secrets Operator Logs
+
 ```bash
 # View ESO logs
 kubectl logs -n external-secrets-system \
@@ -111,6 +110,7 @@ kubectl logs -n external-secrets-system \
 ```
 
 ### Check SecretStore Issues
+
 ```bash
 # Get detailed status
 kubectl describe secretstore vault-secretstore -n argocd
@@ -122,6 +122,7 @@ kubectl get events -n argocd --sort-by='.lastTimestamp' | grep -i secret
 ### Fix Common Issues
 
 #### Secret Not Syncing
+
 ```bash
 # 1. Check if Vault token secret exists
 kubectl get secret vault-token -n argocd
@@ -138,6 +139,7 @@ kubectl rollout restart deployment -n external-secrets-system
 ```
 
 #### Vault Not Accessible
+
 ```bash
 # Check if Vault is running
 docker ps | grep vault
@@ -153,6 +155,7 @@ docker stop vault && docker rm vault
 ## 📝 Common Workflows
 
 ### Rotate Bitbucket Token
+
 ```bash
 # 1. Generate new token in Bitbucket
 # https://bitbucket.org/account/settings/app-passwords/
@@ -172,6 +175,7 @@ kubectl get secret git-repository-credentials -n argocd -o yaml
 ```
 
 ### Add New Secret for Another App
+
 ```bash
 # 1. Store in Vault
 vault kv put secret/myapp/config \
@@ -210,6 +214,7 @@ kubectl get secret myapp-config-secret
 ```
 
 ### Backup Vault Data
+
 ```bash
 # Export all secrets (do this regularly!)
 vault kv list -format=json secret/ | \
@@ -221,6 +226,7 @@ vault kv list -format=json secret/ | \
 ```
 
 ### Restore from Backup
+
 ```bash
 # Restore a specific secret
 vault kv put secret/git/bitbucket \
@@ -230,6 +236,7 @@ vault kv put secret/git/bitbucket \
 ## 🔐 Security Reminders
 
 ### ✅ DO
+
 - Use Vault for all sensitive data
 - Rotate credentials regularly
 - Use least-privilege access
@@ -238,6 +245,7 @@ vault kv put secret/git/bitbucket \
 - Use TLS for Vault in production
 
 ### ❌ DON'T
+
 - Commit `config/values.yaml`
 - Share Vault tokens in plain text
 - Use dev mode in production

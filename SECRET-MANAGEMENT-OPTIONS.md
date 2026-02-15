@@ -15,12 +15,14 @@ Are you using Docker Desktop?
 ## Option 1: HashiCorp Vault (Recommended)
 
 ### ✅ Best For
+
 - Docker Desktop users (Windows/Mac)
 - Development and production environments
 - Teams wanting enterprise-grade secret management
 - Learning industry-standard tools
 
 ### 🎯 Pros
+
 - ✅ Industry-standard secret management
 - ✅ Easy local development with Docker Desktop
 - ✅ Automatic secret rotation support
@@ -30,27 +32,30 @@ Are you using Docker Desktop?
 - ✅ Production-ready
 
 ### ⚠️ Cons
+
 - ❌ Requires running Vault service
 - ❌ More complex than local files
 - ❌ Need Vault CLI or UI for management
 - ❌ Requires External Secrets Operator
 
 ### 📋 Setup Time
+
 - **First time**: ~15 minutes
 - **After setup**: ~2 minutes to add new secrets
 
 ### 🚀 Quick Start
+
 ```bash
 # PowerShell (Windows):
 .\init-vault.ps1
 .\deploy-vault-integration.ps1
 
 # Bash (Linux/Mac/WSL):
-./init-vault.sh
-./deploy-vault-integration.sh
+./init-cluster.sh
 ```
 
 ### 📚 Documentation
+
 - [VAULT-SETUP.md](VAULT-SETUP.md) - Complete guide
 - [VAULT-QUICK-REFERENCE.md](VAULT-QUICK-REFERENCE.md) - Daily commands
 - Vault UI: http://localhost:8200/ui
@@ -60,12 +65,14 @@ Are you using Docker Desktop?
 ## Option 2: Local Configuration Files
 
 ### ✅ Best For
+
 - Quick local testing
 - Learning Kubernetes
 - No external dependencies
 - Single developer
 
 ### 🎯 Pros
+
 - ✅ Simplest setup
 - ✅ No external services needed
 - ✅ Works offline
@@ -73,6 +80,7 @@ Are you using Docker Desktop?
 - ✅ No additional tools required
 
 ### ⚠️ Cons
+
 - ❌ Not production-ready
 - ❌ Manual credential rotation
 - ❌ No audit trail
@@ -81,10 +89,12 @@ Are you using Docker Desktop?
 - ❌ File-based security only
 
 ### 📋 Setup Time
+
 - **First time**: ~2 minutes
 - **After setup**: Instant (edit file)
 
 ### 🚀 Quick Start
+
 ```bash
 # Copy template
 cp config/values.yaml.example config/values.yaml
@@ -97,6 +107,7 @@ nano config/values.yaml     # Linux/Mac
 ```
 
 ### 📚 Documentation
+
 - [REPOSITORY-SETUP.md](REPOSITORY-SETUP.md) - Complete guide
 - [config/README.md](config/README.md) - Configuration details
 
@@ -104,21 +115,21 @@ nano config/values.yaml     # Linux/Mac
 
 ## Feature Comparison
 
-| Feature | Vault | Local Files |
-|---------|-------|-------------|
-| **Setup Complexity** | Medium | Low |
-| **Production Ready** | ✅ Yes | ❌ No |
-| **Cost** | Free (OSS) | Free |
-| **Offline Support** | ⚠️ Limited* | ✅ Yes |
-| **Team Collaboration** | ✅ Yes | ⚠️ Manual |
-| **Audit Logging** | ✅ Yes | ❌ No |
-| **Auto Rotation** | ✅ Yes | ❌ No |
-| **Secret Versioning** | ✅ Yes | ⚠️ Git only |
-| **Access Control** | ✅ Policies | ❌ File perms |
-| **Docker Desktop** | ✅ Easy | ✅ Easy |
-| **Mobile Access** | ❌ No | ❌ No |
-| **Encryption at Rest** | ✅ Yes | ⚠️ OS-level |
-| **Compliance Certs** | ⚠️ Self-managed | ❌ No |
+| Feature                | Vault           | Local Files   |
+| ---------------------- | --------------- | ------------- |
+| **Setup Complexity**   | Medium          | Low           |
+| **Production Ready**   | ✅ Yes          | ❌ No         |
+| **Cost**               | Free (OSS)      | Free          |
+| **Offline Support**    | ⚠️ Limited\*    | ✅ Yes        |
+| **Team Collaboration** | ✅ Yes          | ⚠️ Manual     |
+| **Audit Logging**      | ✅ Yes          | ❌ No         |
+| **Auto Rotation**      | ✅ Yes          | ❌ No         |
+| **Secret Versioning**  | ✅ Yes          | ⚠️ Git only   |
+| **Access Control**     | ✅ Policies     | ❌ File perms |
+| **Docker Desktop**     | ✅ Easy         | ✅ Easy       |
+| **Mobile Access**      | ❌ No           | ❌ No         |
+| **Encryption at Rest** | ✅ Yes          | ⚠️ OS-level   |
+| **Compliance Certs**   | ⚠️ Self-managed | ❌ No         |
 
 \* Vault can work offline if running locally
 
@@ -127,6 +138,7 @@ nano config/values.yaml     # Linux/Mac
 ## Migration Path
 
 ### From Local Files → Vault
+
 1. Note your credentials from `config/values.yaml`
 2. Run `init-vault.ps1` and enter credentials
 3. Update `argocd-git-credentials/values.yaml`: ensure `source: vault`
@@ -138,6 +150,7 @@ nano config/values.yaml     # Linux/Mac
 ## Recommended Setups
 
 ### 🏠 Local Development (Solo or Team)
+
 ```
 Vault on Docker Desktop
 ├─ Quick to start
@@ -147,6 +160,7 @@ Vault on Docker Desktop
 ```
 
 ### 🚀 Production
+
 ```
 Vault in Kubernetes
 ├─ Deploy Vault with HA
@@ -159,25 +173,25 @@ Vault in Kubernetes
 
 ## Security Considerations
 
-| Security Aspect | Vault | Local Files |
-|----------------|-------|-------------|
-| **Encryption in Transit** | ✅ TLS | ⚠️ File copy |
-| **Encryption at Rest** | ✅ Yes | ⚠️ OS-level |
-| **Zero-Knowledge** | ⚠️ Self-managed | ❌ No |
-| **Secret Leakage Risk** | Low | High |
-| **Git Commit Risk** | None | High (.gitignore) |
-| **Access Revocation** | Instant | Manual |
-| **Credential Sharing** | Secure | Insecure |
+| Security Aspect           | Vault           | Local Files       |
+| ------------------------- | --------------- | ----------------- |
+| **Encryption in Transit** | ✅ TLS          | ⚠️ File copy      |
+| **Encryption at Rest**    | ✅ Yes          | ⚠️ OS-level       |
+| **Zero-Knowledge**        | ⚠️ Self-managed | ❌ No             |
+| **Secret Leakage Risk**   | Low             | High              |
+| **Git Commit Risk**       | None            | High (.gitignore) |
+| **Access Revocation**     | Instant         | Manual            |
+| **Credential Sharing**    | Secure          | Insecure          |
 
 ---
 
 ## Cost Comparison (Annual)
 
-| Solution | Setup | Yearly Cost | Notes |
-|----------|-------|-------------|-------|
-| **Local Files** | Free | $0 | Not production-ready |
-| **Vault OSS (Self-hosted)** | Free | $0* | *Infrastructure costs |
-| **Vault Enterprise** | Quote | $$$$ | Advanced features |
+| Solution                    | Setup | Yearly Cost | Notes                  |
+| --------------------------- | ----- | ----------- | ---------------------- |
+| **Local Files**             | Free  | $0          | Not production-ready   |
+| **Vault OSS (Self-hosted)** | Free  | $0\*        | \*Infrastructure costs |
+| **Vault Enterprise**        | Quote | $$$$        | Advanced features      |
 
 ---
 
@@ -191,7 +205,7 @@ Vault in Kubernetes
 4. **Want professional tool?** → Use Vault
 5. **Free & production-grade?** → Vault (self-hosted)
 
-**Recommendation: Use Vault!**  
+**Recommendation: Use Vault!**
 It's the industry standard, works great with Docker Desktop, and you'll learn valuable skills.
 
 ---
