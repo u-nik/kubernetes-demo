@@ -6,25 +6,12 @@
 
   vars:
     bootstrap_argocd_namespace: "{{ argocd_namespace | default('argocd') }}"
-    bootstrap_vault_addr: "{{ vault_addr | default('http://localhost:8200') }}"
-    bootstrap_vault_token: "{{ vault_token | default('myroot') }}"
-    bootstrap_repo_url: "{{ repo_url | default('https://bitbucket.org/storelogix/kubernetes-demo.git') }}"
+    bootstrap_vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('http://localhost:8200', true) }}"
+    bootstrap_vault_token: "{{ lookup('env', 'VAULT_TOKEN') | default('myroot', true) }}"
+    bootstrap_repo_url: "{{ repo_url | default('git@bitbucket.org:storelogix/kubernetes-demo.git') }}"
     root_dir: "{{ playbook_dir | dirname }}"
 
-  vars_prompt:
-    - name: bitbucket_username
-      prompt: Bitbucket Username
-      private: false
-    - name: bitbucket_token
-      prompt: Bitbucket App Password/Token
-      private: true
-
   tasks:
-    - name: Resolve Bitbucket auth username
-      ansible.builtin.set_fact:
-        bitbucket_auth_username: "{{ 'x-token-auth' if (bitbucket_token | default('') | regex_search('^ATAT')) else bitbucket_username }}"
-      no_log: true
-
     - name: Check required commands are available
       ansible.builtin.shell: "command -v {{ item }}"
       args:
@@ -90,23 +77,66 @@
         vault vault secrets enable -version=2 -path=secret kv
       when: "'secret/' not in vault_secrets.stdout"
 
-    - name: Store git credentials in Vault
-      ansible.builtin.command: >-
-        docker exec -e VAULT_ADDR=http://127.0.0.1:8200
-        -e VAULT_TOKEN={{ bootstrap_vault_token }}
-        vault vault kv put secret/git/bitbucket
-        url={{ bootstrap_repo_url }}
-        username={{ bitbucket_auth_username }}
-        password={{ bitbucket_token }}
+    - name: Create temp directory for SSH key
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: _argocd_git
+      register: bitbucket_key_dir
+
+    - name: Set SSH key file path
+      ansible.builtin.set_fact:
+        bitbucket_key_path: "{{ bitbucket_key_dir.path }}/argocd_git_key"
+
+    - name: Write SSH private key from Vault directly to file
+      ansible.builtin.shell: |
+        docker exec -e VAULT_ADDR={{ bootstrap_vault_addr }} \
+          -e VAULT_TOKEN={{ bootstrap_vault_token }} \
+          vault vault kv get -field=sshPrivateKey secret/git/bitbucket \
+          > "{{ bitbucket_key_path }}"
+        chmod 600 "{{ bitbucket_key_path }}"
+      args:
+        executable: /bin/bash
       no_log: true
 
-    - name: Validate Bitbucket credentials against repository
+    - name: Verify SSH key is valid
+      ansible.builtin.command: ssh-keygen -lf "{{ bitbucket_key_path }}"
+      register: ssh_key_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if SSH key from Vault is invalid
+      ansible.builtin.fail:
+        msg: >-
+          SSH private key from Vault is invalid.
+          ssh-keygen output: {{ ssh_key_check.stderr | default('') }}
+          Ensure the key was stored with: vault kv put secret/git/bitbucket sshPrivateKey=@/path/to/keyfile
+      when: ssh_key_check.rc != 0
+
+    - name: Read repository URL from Vault
       ansible.builtin.shell: |
-        git ls-remote "https://{{ bitbucket_auth_username }}:{{ bitbucket_token }}@{{ bootstrap_repo_url | regex_replace('^https://', '') }}" HEAD >/dev/null
+        docker exec -e VAULT_ADDR={{ bootstrap_vault_addr }} \
+          -e VAULT_TOKEN={{ bootstrap_vault_token }} \
+          vault vault kv get -field=url secret/git/bitbucket
+      args:
+        executable: /bin/bash
+      register: bitbucket_repo_vault
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Override repo URL from Vault when available
+      ansible.builtin.set_fact:
+        bootstrap_repo_url: "{{ (bitbucket_repo_vault.stdout | default('')) | trim }}"
+      when: bitbucket_repo_vault.rc == 0 and (bitbucket_repo_vault.stdout | default('')) | trim | length > 0
+
+    - name: Validate Bitbucket SSH access against repository
+      ansible.builtin.shell: |
+        GIT_SSH_COMMAND='ssh -i {{ bitbucket_key_path }} -o StrictHostKeyChecking=no' \
+          git ls-remote "{{ bootstrap_repo_url }}" HEAD >/dev/null
       args:
         executable: /bin/bash
       changed_when: false
-      no_log: true
+      no_log: false
 
     - name: Add Helm repositories
       ansible.builtin.command: "{{ item }}"
@@ -156,21 +186,20 @@
 
     - name: Apply bootstrap ArgoCD repository credential secret
       ansible.builtin.shell: |
-        cat <<EOF | kubectl apply -f -
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: git-repository-credentials
-          namespace: {{ bootstrap_argocd_namespace }}
-          labels:
-            argocd.argoproj.io/secret-type: repository
-        type: Opaque
-        stringData:
-          type: git
-          url: {{ bootstrap_repo_url }}
-          username: {{ bitbucket_auth_username }}
-          password: {{ bitbucket_token }}
-        EOF
+        secret_args=(
+          --from-literal=type=git
+          --from-literal=url={{ bootstrap_repo_url }}
+          --from-file=sshPrivateKey={{ bitbucket_key_path }}
+          --from-literal=insecureIgnoreHostKey=true
+        )
+        kubectl create secret generic git-repository-credentials \
+          -n {{ bootstrap_argocd_namespace }} \
+          --type=Opaque \
+          "${secret_args[@]}" \
+          --dry-run=client -o yaml | kubectl apply -f -
+        kubectl label secret git-repository-credentials \
+          -n {{ bootstrap_argocd_namespace }} \
+          argocd.argoproj.io/secret-type=repository --overwrite
       args:
         executable: /bin/bash
       register: repo_secret_apply

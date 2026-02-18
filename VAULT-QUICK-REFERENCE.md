@@ -44,11 +44,11 @@ vault kv get -format=json secret/git/bitbucket
 ### Update Credentials
 
 ```bash
-# Update git credentials
+# Update git credentials (SSH)
 vault kv put secret/git/bitbucket \
-  url="https://bitbucket.org/storelogix/kubernetes-demo.git" \
-  username="new-username" \
-  password="new-token"
+  url="git@bitbucket.org:storelogix/kubernetes-demo.git" \
+  sshPrivateKey=@/path/to/argocd_git \
+  insecureIgnoreHostKey="true"
 
 # Add new secret
 vault kv put secret/myapp/database \
@@ -154,17 +154,17 @@ docker stop vault && docker rm vault
 
 ## 📝 Common Workflows
 
-### Rotate Bitbucket Token
+### Rotate Bitbucket SSH Key
 
 ```bash
-# 1. Generate new token in Bitbucket
-# https://bitbucket.org/account/settings/app-passwords/
+# 1. Generate a new SSH key (or use the script)
+# ./scripts/rotate-argocd-git-ssh-key.sh
 
-# 2. Update in Vault
+# 2. Update in Vault (if not using the script)
 vault kv put secret/git/bitbucket \
-  url="https://bitbucket.org/storelogix/kubernetes-demo.git" \
-  username="your-username" \
-  password="NEW-TOKEN-HERE"
+  url="git@bitbucket.org:storelogix/kubernetes-demo.git" \
+  sshPrivateKey=@/path/to/argocd_git \
+  insecureIgnoreHostKey="true"
 
 # 3. Wait for auto-sync (refresh interval: 1h) or force sync
 kubectl annotate externalsecret argocd-git-credentials -n argocd \

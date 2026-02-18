@@ -13,19 +13,28 @@ source: vault
 
 # Git repository configuration
 repository:
-  # Repository URL (e.g., https://bitbucket.org/storelogix/kubernetes-demo.git)
-  url: "https://bitbucket.org/storelogix/kubernetes-demo.git"
-  
+  # Repository URL (e.g., git@bitbucket.org:storelogix/kubernetes-demo.git)
+  url: "git@bitbucket.org:storelogix/kubernetes-demo.git"
+
   # Direct authentication credentials (only used when source=direct)
   auth:
-    # Bitbucket username
+    # Type of authentication: ssh, token, or password
+    type: ssh
+
+    # Bitbucket username (token/password auth only)
     username: ""
-    
-    # Bitbucket App Password or Personal Access Token
+
+    # Bitbucket App Password or Personal Access Token (token/password auth only)
     token: ""
-    
-    # Type of authentication: token or password
-    type: token
+
+    # SSH private key (ssh auth only)
+    sshPrivateKey: ""
+
+    # Optional SSH known hosts (ssh auth only)
+    sshKnownHosts: ""
+
+    # Disable host key checking (ssh auth only)
+    insecureIgnoreHostKey: true
 
 # Vault configuration (only used when source=vault)
 vault:
@@ -36,8 +45,13 @@ vault:
   
   # Vault path for git credentials
   # For KV v2: path should be like "git/bitbucket"
-  # Vault will look for keys: username, password, url
+  # Vault will look for keys:
+  # - token/password auth: username, password, url
+  # - ssh auth: sshPrivateKey, url, (optional) sshKnownHosts
   path: "git/bitbucket"
+
+  # Include sshKnownHosts from Vault when using ssh auth
+  includeKnownHosts: false
   
   # Refresh interval for syncing from Vault
   refreshInterval: "1h"

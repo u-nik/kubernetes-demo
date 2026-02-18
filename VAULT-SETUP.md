@@ -94,13 +94,10 @@ docker run -d --name vault \
 Vault will be available at: http://localhost:8200
 Root token: `myroot`
 
-#### Step 2: Create Bitbucket App Password
+#### Step 2: Create Bitbucket SSH Key
 
-1. Go to https://bitbucket.org/account/settings/app-passwords/
-2. Click **Create app password**
-3. Name: "Kubernetes ArgoCD"
-4. Permissions: **Repositories: Read**
-5. Copy the generated password
+1. Generate an SSH key for ArgoCD (see Step 3 for the script).
+2. Add the **public key** to Bitbucket (Workspace settings -> SSH keys).
 
 #### Step 3: Store Credentials in Vault
 
@@ -108,14 +105,17 @@ Root token: `myroot`
 export VAULT_ADDR="http://localhost:8200"
 export VAULT_TOKEN="myroot"
 
+# Generate a new SSH key and store it in Vault
+./scripts/rotate-argocd-git-ssh-key.sh
+
 # Enable KV v2 engine (if not already enabled)
 vault secrets enable -version=2 -path=secret kv
 
-# Store git credentials
+# Or store git credentials manually (SSH)
 vault kv put secret/git/bitbucket \
-  url="https://bitbucket.org/storelogix/kubernetes-demo.git" \
-  username="your-bitbucket-username" \
-  password="your-app-password"
+  url="git@bitbucket.org:storelogix/kubernetes-demo.git" \
+  sshPrivateKey=@/path/to/argocd_git \
+  insecureIgnoreHostKey="true"
 
 # Verify
 vault kv get secret/git/bitbucket
@@ -126,7 +126,7 @@ Or use the Vault UI at http://localhost:8200/ui:
 1. Login with token: `myroot`
 2. Navigate to **secret** (KV v2)
 3. Create secret at path: `git/bitbucket`
-4. Add keys: `url`, `username`, `password`
+4. Add keys: `url`, `sshPrivateKey`, `insecureIgnoreHostKey`
 
 #### Step 4: Create Vault Token Secret in Kubernetes
 
@@ -359,11 +359,11 @@ vault:
 # View Vault secrets
 vault kv get secret/git/bitbucket
 
-# Update credentials
+# Update credentials (SSH)
 vault kv put secret/git/bitbucket \
-  url="https://bitbucket.org/storelogix/kubernetes-demo.git" \
-  username="new-username" \
-  password="new-token"
+  url="git@bitbucket.org:storelogix/kubernetes-demo.git" \
+  sshPrivateKey=@/path/to/argocd_git \
+  insecureIgnoreHostKey="true"
 
 # Force sync in Kubernetes
 kubectl annotate externalsecret argocd-git-credentials -n argocd \

@@ -36,17 +36,20 @@ Edit `config/values.yaml`:
 
 ```yaml
 repository:
-  url: https://bitbucket.org/storelogix/kubernetes-demo.git
-  
-  auth:
-    # Your Bitbucket username
-    username: "your-bitbucket-username"
-    
-    # The App Password you created in step 1
-    token: "your-app-password-here"
-    
-    # Keep this as token
-    type: token
+   url: git@bitbucket.org:storelogix/kubernetes-demo.git
+
+   auth:
+      # Use SSH for repository access
+      type: ssh
+
+      # Paste your private key here
+      sshPrivateKey: |
+         -----BEGIN OPENSSH PRIVATE KEY-----
+         ...
+         -----END OPENSSH PRIVATE KEY-----
+
+      # Disable host key checking (optional)
+      insecureIgnoreHostKey: true
 
 targetRevision: main
 ```
@@ -82,7 +85,7 @@ kubectl logs -n argocd -l app.kubernetes.io/name=argocd-server
 ## Security Best Practices
 
 1. ✅ **Never commit `config/values.yaml`** - it's already in `.gitignore`
-2. ✅ **Use App Passwords** instead of your account password
+2. ✅ **Use a dedicated SSH key** for ArgoCD
 3. ✅ **Grant minimum permissions** (only repository:read)
 4. ✅ **Rotate credentials regularly**
 5. ✅ **Use different App Passwords** for different environments
@@ -98,15 +101,16 @@ If ArgoCD shows authentication errors:
    kubectl get secret git-repository-credentials -n argocd -o yaml
    ```
 
-2. Verify the credentials are correct:
+2. Verify the repo URL is correct:
    ```bash
-   kubectl get secret git-repository-credentials -n argocd -o jsonpath='{.data.username}' | base64 -d
+   kubectl get secret git-repository-credentials -n argocd -o jsonpath='{.data.url}' | base64 -d
    ```
 
 3. Test Bitbucket access manually:
    ```bash
-   # Replace with your credentials
-   git clone https://YOUR_USERNAME:YOUR_APP_PASSWORD@bitbucket.org/storelogix/kubernetes-demo.git test-clone
+   # Replace with your key path
+   GIT_SSH_COMMAND='ssh -i /path/to/argocd_git -o StrictHostKeyChecking=no' \
+     git clone git@bitbucket.org:storelogix/kubernetes-demo.git test-clone
    ```
 
 ### Secret Not Created
