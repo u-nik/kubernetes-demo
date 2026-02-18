@@ -36,6 +36,9 @@ cd kubernetes-demo
 
 ### Step 3: Configure Terraform
 
+Install Terraform first: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+
+
 ```bash
 cd infrastructure/terraform
 cp terraform.tfvars.example terraform.tfvars

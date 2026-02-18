@@ -4,12 +4,20 @@
   connection: local
   gather_facts: false
 
+  vars_prompt:
+    - name: cluster_name_input
+      prompt: "Enter cluster name (or set CLUSTER_NAME env var to skip)"
+      default: "{{ lookup('env', 'CLUSTER_NAME') | default('kubernetes-demo', true) }}"
+      private: false
+
   vars:
+    cluster_name: "{{ cluster_name_input }}"
     bootstrap_argocd_namespace: "{{ argocd_namespace | default('argocd') }}"
     bootstrap_vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('http://localhost:8200', true) }}"
     bootstrap_vault_token: "{{ lookup('env', 'VAULT_TOKEN') | default('myroot', true) }}"
     bootstrap_repo_url: "{{ repo_url | default('git@bitbucket.org:storelogix/kubernetes-demo.git') }}"
     root_dir: "{{ playbook_dir | dirname }}"
+    terraform_dir: "{{ root_dir }}/infrastructure/terraform/kind-local"
 
   tasks:
     - name: Check required commands are available
@@ -22,10 +30,50 @@
         - helm
         - curl
         - docker
+        - terraform
+        - kind
+
+    - name: Display cluster name
+      ansible.builtin.debug:
+        msg: "Creating KIND cluster: {{ cluster_name }}"
+
+    - name: Initialize Terraform
+      ansible.builtin.command:
+        cmd: terraform init -input=false
+        chdir: "{{ terraform_dir }}"
+      changed_when: false
+
+    - name: Apply Terraform to create KIND cluster
+      ansible.builtin.command:
+        cmd: >-
+          terraform apply -auto-approve
+          -var="cluster_name={{ cluster_name }}"
+        chdir: "{{ terraform_dir }}"
+      register: terraform_apply
+
+    - name: Get kubeconfig path from Terraform
+      ansible.builtin.command:
+        cmd: terraform output -raw kubeconfig_path
+        chdir: "{{ terraform_dir }}"
+      register: kubeconfig_path_result
+      changed_when: false
+
+    - name: Set KUBECONFIG for subsequent tasks
+      ansible.builtin.set_fact:
+        kubeconfig_export: "{{ kubeconfig_path_result.stdout }}"
+
+    - name: Export kubeconfig to user home
+      ansible.builtin.shell: |
+        terraform -chdir="{{ terraform_dir }}" output -raw kubeconfig > "${HOME}/.kube/kind-{{ cluster_name }}-config"
+        chmod 600 "${HOME}/.kube/kind-{{ cluster_name }}-config"
+      args:
+        executable: /bin/bash
 
     - name: Verify Kubernetes connectivity
       ansible.builtin.command: kubectl cluster-info
       changed_when: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_export }}"
 
     - name: Check Vault health endpoint
       ansible.builtin.uri:

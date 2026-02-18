@@ -18,7 +18,9 @@
             "command": "npx",
             "args": [
                 "-y",
-                "kubernetes-mcp-server@latest"
+                "kubernetes-mcp-server@latest",
+                "--kubeconfig",
+                "~/.kube/kind-csk8s-config"
             ]
         }
     }
